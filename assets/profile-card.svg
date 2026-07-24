@@ -1280,29 +1280,29 @@
     <text x="16" y="26" fill="#a1a1aa" font-size="10" letter-spacing="0.08em" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">TOP LANGUAGES</text>
     <g transform="translate(16,48)">
       <text x="0" y="0" fill="#fafafa" font-size="12" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">TypeScript</text>
-      <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">57%</text>
+      <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">55%</text>
       <rect x="0" y="8" width="256" height="4" rx="2" fill="#09090b"/>
-      <rect x="0" y="8" width="145.04247131088522" height="4" rx="2" fill="#3178c6"/>
+      <rect x="0" y="8" width="141.93983040552033" height="4" rx="2" fill="#3178c6"/>
     </g><g transform="translate(16,82)">
       <text x="0" y="0" fill="#fafafa" font-size="12" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">JavaScript</text>
-      <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">24%</text>
+      <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">25%</text>
       <rect x="0" y="8" width="256" height="4" rx="2" fill="#09090b"/>
-      <rect x="0" y="8" width="60.24135105743781" height="4" rx="2" fill="#f1e05a"/>
+      <rect x="0" y="8" width="64.42887479651093" height="4" rx="2" fill="#f1e05a"/>
     </g><g transform="translate(16,116)">
       <text x="0" y="0" fill="#fafafa" font-size="12" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">CSS</text>
       <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">9%</text>
       <rect x="0" y="8" width="256" height="4" rx="2" fill="#09090b"/>
-      <rect x="0" y="8" width="23.106776639537596" height="4" rx="2" fill="#663399"/>
+      <rect x="0" y="8" width="22.612493621984115" height="4" rx="2" fill="#663399"/>
     </g><g transform="translate(16,150)">
       <text x="0" y="0" fill="#fafafa" font-size="12" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">SCSS</text>
       <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">7%</text>
       <rect x="0" y="8" width="256" height="4" rx="2" fill="#09090b"/>
-      <rect x="0" y="8" width="17.704135900249774" height="4" rx="2" fill="#c6538c"/>
+      <rect x="0" y="8" width="17.325422163908936" height="4" rx="2" fill="#c6538c"/>
     </g><g transform="translate(16,184)">
       <text x="0" y="0" fill="#fafafa" font-size="12" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">Python</text>
-      <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">3%</text>
+      <text x="256" y="0" text-anchor="end" fill="#a1a1aa" font-size="11" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">2%</text>
       <rect x="0" y="8" width="256" height="4" rx="2" fill="#09090b"/>
-      <rect x="0" y="8" width="6.5136779172025445" height="4" rx="2" fill="#3572A5"/>
+      <rect x="0" y="8" width="6.374342153218165" height="4" rx="2" fill="#3572A5"/>
     </g>
   
 </g>
