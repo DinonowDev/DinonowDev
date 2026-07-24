@@ -257,7 +257,7 @@ function animatedContributionPanel(data, leftW) {
   const MORPH = 2.4;
   const SETTLE = 4.2;
   const BACK = 1.6;
-  const INTRO_DELAY = 4.6;
+  const INTRO_DELAY = 5.2;
   const TOTAL = HOLD + MORPH + SETTLE + BACK;
   const tHold = +(HOLD / TOTAL).toFixed(4);
   const tMorphEnd = +((HOLD + MORPH) / TOTAL).toFixed(4);
@@ -357,7 +357,7 @@ function openingShutter(width, height) {
     </pattern>
     <clipPath id="shutter-clip">
       <rect x="0" y="0" width="${width}" height="${height}">
-        <animate attributeName="height" values="${height};${height};0" keyTimes="0;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.22 1 0.36 1"/>
+        <animate attributeName="height" values="${height};${height};0;0" keyTimes="0;0.38;0.86;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.22 1 0.36 1;0 0 1 1"/>
       </rect>
     </clipPath>
     <linearGradient id="mustard-fabric" x1="0" y1="0" x2="1" y2="1">
@@ -380,41 +380,44 @@ function openingShutter(width, height) {
 
   <!-- Pull cord -->
   <g>
-    <animate attributeName="opacity" values="1;1;1;0" keyTimes="0;0.32;0.9;1" dur="4.6s" fill="freeze"/>
+    <animate attributeName="opacity" values="1;1;1;0" keyTimes="0;0.76;0.94;1" dur="5.2s" fill="freeze"/>
     <rect x="0" y="0" width="${width}" height="16" rx="8" fill="#171719" stroke="#3a3020"/>
     <line x1="${width - 36}" y1="14" x2="${width - 36}" y2="366" stroke="#332b1a" stroke-width="3">
-      <animate attributeName="y2" values="366;366;404;404;18" keyTimes="0;0.2;0.32;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+      <animate attributeName="y2" values="366;366;404;404;18;18" keyTimes="0;0.26;0.38;0.4;0.86;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1;0 0 1 1"/>
     </line>
 
-    <!-- Curious cat: looks around, grabs the pull, then rides upward -->
+    <!-- Sneaky cat: checks both sides, pulls, stays down, then escapes below -->
     <g>
-      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 -348" keyTimes="0;0.2;0.32;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 38;0 180" keyTimes="0;0.26;0.38;0.74;0.84;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.55 0 1 0.45"/>
       <path d="M${width - 125},360 C${width - 165},370 ${width - 158},326 ${width - 139},338" fill="none" stroke="#171719" stroke-width="12" stroke-linecap="round"/>
       <ellipse cx="${width - 108}" cy="360" rx="34" ry="43" fill="#171719"/>
       <path d="M${width - 131},319 L${width - 126},292 L${width - 112},304 Q${width - 103},300 ${width - 94},304 L${width - 79},292 L${width - 84},320 Q${width - 83},340 ${width - 107},344 Q${width - 132},340 ${width - 131},319Z" fill="#171719"/>
       <ellipse cx="${width - 117}" cy="316" rx="6.5" ry="8" fill="#fff8dc">
-        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.32;0.38;0.44;1" dur="1.2s" repeatCount="2"/>
+        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.42;0.48;0.54;1" dur="1.8s" fill="freeze"/>
       </ellipse>
       <ellipse cx="${width - 96}" cy="316" rx="6.5" ry="8" fill="#fff8dc">
-        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.32;0.38;0.44;1" dur="1.2s" repeatCount="2"/>
+        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.42;0.48;0.54;1" dur="1.8s" fill="freeze"/>
       </ellipse>
       <circle cx="${width - 119}" cy="317" r="3" fill="#171719">
-        <animate attributeName="cx" values="${width - 119};${width - 114};${width - 120};${width - 117}" keyTimes="0;0.3;0.65;1" dur="1.35s" repeatCount="2" fill="freeze"/>
+        <animate attributeName="cx" values="${width - 117};${width - 122};${width - 112};${width - 117}" keyTimes="0;0.28;0.66;1" dur="1.8s" fill="freeze"/>
       </circle>
       <circle cx="${width - 98}" cy="317" r="3" fill="#171719">
-        <animate attributeName="cx" values="${width - 98};${width - 93};${width - 99};${width - 96}" keyTimes="0;0.3;0.65;1" dur="1.35s" repeatCount="2" fill="freeze"/>
+        <animate attributeName="cx" values="${width - 96};${width - 101};${width - 91};${width - 96}" keyTimes="0;0.28;0.66;1" dur="1.8s" fill="freeze"/>
       </circle>
       <path d="M${width - 110},329 Q${width - 106},333 ${width - 102},329" fill="none" stroke="#fff8dc" stroke-width="1.8" stroke-linecap="round"/>
       <line x1="${width - 122}" y1="328" x2="${width - 143}" y2="324" stroke="#fff8dc" stroke-width="1.2"/>
       <line x1="${width - 122}" y1="332" x2="${width - 144}" y2="334" stroke="#fff8dc" stroke-width="1.2"/>
       <line x1="${width - 91}" y1="328" x2="${width - 70}" y2="324" stroke="#fff8dc" stroke-width="1.2"/>
       <line x1="${width - 91}" y1="332" x2="${width - 69}" y2="335" stroke="#fff8dc" stroke-width="1.2"/>
-      <path d="M${width - 85},347 Q${width - 63},350 ${width - 40},364" fill="none" stroke="#171719" stroke-width="11" stroke-linecap="round"/>
-      <circle cx="${width - 39}" cy="364" r="7" fill="#171719"/>
+      <g>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.38;0.48;1" dur="5.2s" fill="freeze"/>
+        <path d="M${width - 85},347 Q${width - 63},350 ${width - 40},364" fill="none" stroke="#171719" stroke-width="11" stroke-linecap="round"/>
+        <circle cx="${width - 39}" cy="364" r="7" fill="#171719"/>
+      </g>
     </g>
 
     <g>
-      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 -348" keyTimes="0;0.2;0.32;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 -348;0 -348" keyTimes="0;0.26;0.38;0.4;0.86;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1;0 0 1 1"/>
       <rect x="${width - 47}" y="352" width="22" height="32" rx="11" fill="#171719"/>
       <circle cx="${width - 36}" cy="362" r="3.5" fill="#f8dc62"/>
     </g>
