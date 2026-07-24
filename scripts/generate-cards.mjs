@@ -110,6 +110,9 @@ function aggregate(user) {
   const cal = user.contributionsCollection.contributionCalendar;
   const weeks = cal.weeks.map((w) => w.contributionDays.map((d) => d.contributionCount));
   const maxDay = Math.max(1, ...weeks.flat());
+  const activeDays = weeks.flat().filter((count) => count > 0).length;
+  const averagePerActiveDay =
+    activeDays > 0 ? cal.totalContributions / activeDays : 0;
   const created = new Date(user.createdAt);
   const years = Math.max(
     1,
@@ -134,6 +137,8 @@ function aggregate(user) {
     languages,
     weeks,
     maxDay,
+    activeDays,
+    averagePerActiveDay,
   };
 }
 
@@ -304,7 +309,67 @@ function animatedContributionPanel(data, leftW) {
     <text x="${Math.min(heatW, areaW)}" y="${heatH + 26}" text-anchor="end" fill="${C.faint}" font-size="10" font-family="${FONT}">last 12 months</text>
   </g>`;
 
-  return `<g transform="translate(16,44)">${morphRects}${restRects}${caption}</g>`;
+  const insightsY = heatH + 54;
+  const insightW = (areaW - 16) / 3;
+  const insights = `
+  <g transform="translate(0,${insightsY})">
+    <line x1="0" y1="-12" x2="${areaW}" y2="-12" stroke="${C.line}"/>
+    ${label("ACTIVE DAYS", 0, 8)}
+    ${value(data.activeDays, 0, 34, 20)}
+    ${label("BEST DAY", insightW, 8)}
+    ${value(data.maxDay, insightW, 34, 20)}
+    ${label("AVG / ACTIVE DAY", insightW * 2, 8)}
+    ${value(data.averagePerActiveDay.toFixed(1), insightW * 2, 34, 20)}
+  </g>`;
+
+  return `<g transform="translate(16,44)">${morphRects}${restRects}${caption}${insights}</g>`;
+}
+
+/**
+ * A one-shot roller blind intro. The pull tab drops first, then the shutter
+ * retracts upward to reveal the dashboard. `fill="freeze"` keeps it open.
+ */
+function openingShutter(width, height) {
+  const slatHeight = 20;
+  let slats = "";
+  for (let y = slatHeight; y < height; y += slatHeight) {
+    slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="#24242a" stroke-width="1"/>`;
+  }
+
+  return `
+  <defs>
+    <clipPath id="shutter-clip">
+      <rect x="0" y="0" width="${width}" height="${height}">
+        <animate attributeName="height" values="${height};${height};0" keyTimes="0;0.26;1" dur="1.8s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.22 1 0.36 1"/>
+      </rect>
+    </clipPath>
+    <linearGradient id="shutter-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#18181c"/>
+      <stop offset="0.5" stop-color="#101013"/>
+      <stop offset="1" stop-color="#18181c"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#shutter-clip)">
+    <rect width="${width}" height="${height}" rx="18" fill="url(#shutter-sheen)"/>
+    ${slats}
+    <text x="${width / 2}" y="${height / 2 - 5}" text-anchor="middle" fill="${C.text}" font-size="12" letter-spacing="0.18em" font-family="${FONT}">PULL TO OPEN</text>
+    <text x="${width / 2}" y="${height / 2 + 20}" text-anchor="middle" fill="${C.faint}" font-size="10" font-family="${FONT}">GITHUB PROFILE · ${esc(USERNAME)}</text>
+    <rect x="0" y="${height - 5}" width="${width}" height="5" fill="${C.teal}"/>
+  </g>
+
+  <g>
+    <animate attributeName="opacity" values="1;1;1;0" keyTimes="0;0.18;0.72;1" dur="1.8s" fill="freeze"/>
+    <rect x="0" y="0" width="${width}" height="13" rx="6.5" fill="#202025" stroke="#303038"/>
+    <line x1="${width - 36}" y1="12" x2="${width - 36}" y2="112" stroke="${C.muted}" stroke-width="2">
+      <animate attributeName="y2" values="112;146;146;18" keyTimes="0;0.18;0.26;1" dur="1.8s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+    </line>
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 34;0 34;0 -94" keyTimes="0;0.18;0.26;1" dur="1.8s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+      <rect x="${width - 45}" y="108" width="18" height="28" rx="9" fill="${C.teal}"/>
+      <circle cx="${width - 36}" cy="117" r="3" fill="${C.bg}"/>
+    </g>
+  </g>`;
 }
 
 function buildCard(data) {
@@ -413,6 +478,7 @@ function buildCard(data) {
   )}
 
   <text x="${W - pad}" y="${H - 8}" text-anchor="end" fill="${C.faint}" font-size="9" font-family="${FONT}">${updated}</text>
+  ${openingShutter(W, H)}
 </svg>
 `;
 }
