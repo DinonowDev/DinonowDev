@@ -47,7 +47,7 @@
   <rect width="137.33333333333334" height="78" rx="14" fill="#131316" stroke="#27272a"/>
   <rect x="0" y="14" width="3" height="50" rx="1.5" fill="#2dd4bf"/>
        <text x="16" y="28" fill="#a1a1aa" font-size="10" letter-spacing="0.08em" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">MERGED PRS</text>
-       <text x="16" y="58" fill="#fafafa" font-size="24" font-weight="600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">39</text>
+       <text x="16" y="58" fill="#fafafa" font-size="24" font-weight="600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">0</text>
 </g><g transform="translate(764.6666666666667,148)">
   <rect width="137.33333333333334" height="78" rx="14" fill="#131316" stroke="#27272a"/>
   <rect x="0" y="14" width="3" height="50" rx="1.5" fill="#4ade80"/>
@@ -102,7 +102,7 @@
 <rect width="8" height="8" rx="2" x="169" y="60" fill="#5eead4">
   <animate attributeName="x" values="169;169;10;10;169" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.44s" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1"/>
   <animate attributeName="y" values="60;60;10;10;60" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.44s" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1"/>
-  <animate attributeName="fill" values="#5eead4;#5eead4;#0f766e;#0f766e;#5eead4" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.44s"/>
+  <animate attributeName="fill" values="#5eead4;#5eead4;#14b8a6;#14b8a6;#5eead4" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.44s"/>
 </rect>
 <rect width="8" height="8" rx="2" x="179" y="60" fill="#5eead4">
   <animate attributeName="x" values="179;179;10;10;179" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.47s" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1"/>
