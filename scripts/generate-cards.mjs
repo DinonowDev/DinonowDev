@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Self-hosted GitHub profile SVG — dark bento layout.
+ * Self-hosted GitHub profile SVG — dark bento + animated contribution morph.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -127,7 +127,7 @@ function aggregate(user) {
     repos: user.repositories.totalCount,
     stars,
     forks,
-    mergedPrs: user.pullRequests.totalCount,
+    mergedPrs: user.pullRequests?.totalCount ?? 0,
     contributions: cal.totalContributions,
     years,
     since: created.getFullYear(),
@@ -176,22 +176,148 @@ function value(text, x, y, size = 26) {
   return `<text x="${x}" y="${y}" fill="${C.text}" font-size="${size}" font-weight="600" font-family="${FONT}">${esc(text)}</text>`;
 }
 
+/** 5×7 pixel glyphs — contribution-dot typography */
+const GLYPHS = {
+  0: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+  1: ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
+  2: ["01110", "10001", "00001", "00110", "01000", "10000", "11111"],
+  3: ["01110", "10001", "00001", "00110", "00001", "10001", "01110"],
+  4: ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
+  5: ["11111", "10000", "11110", "00001", "00001", "10001", "01110"],
+  6: ["01110", "10000", "11110", "10001", "10001", "10001", "01110"],
+  7: ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
+  8: ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
+  9: ["01110", "10001", "10001", "01111", "00001", "00001", "01110"],
+  k: ["10001", "10010", "10100", "11000", "10100", "10010", "10001"],
+  ".": ["00000", "00000", "00000", "00000", "00000", "00100", "00100"],
+  " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
+};
+
+function glyphDots(text, cell = 8, gap = 2, tracking = 1) {
+  const step = cell + gap;
+  const dots = [];
+  let cursor = 0;
+  for (const ch of text) {
+    const g = GLYPHS[ch] || GLYPHS[" "];
+    for (let row = 0; row < 7; row++) {
+      for (let col = 0; col < 5; col++) {
+        if (g[row][col] === "1") {
+          dots.push({ x: cursor + col * step, y: row * step });
+        }
+      }
+    }
+    cursor += (5 + tracking) * step;
+  }
+  return { dots, width: Math.max(0, cursor - tracking * step), height: 7 * step - gap };
+}
+
+/**
+ * Phase 1: dots form the contribution count (e.g. "1.5k")
+ * Phase 2: dots fly into the real heatmap cells
+ * Then loop.
+ */
+function animatedContributionPanel(data, leftW) {
+  const cell = 8;
+  const cg = 2;
+  const step = cell + cg;
+  const areaW = leftW - 32;
+
+  const targets = [];
+  data.weeks.forEach((days, wi) => {
+    days.forEach((count, di) => {
+      targets.push({
+        x: wi * step,
+        y: di * step,
+        count,
+        color: heatColor(count, data.maxDay),
+      });
+    });
+  });
+
+  const heatH = 7 * step - cg;
+  const heatW = data.weeks.length * step - cg;
+
+  const word = fmt(data.contributions); // e.g. "1.5k"
+  const { dots: textDots, width: textW, height: textH } = glyphDots(word, cell, cg, 1);
+  const originX = Math.max(0, (Math.min(areaW, heatW) - textW) / 2);
+  const originY = Math.max(0, (heatH - textH) / 2);
+
+  // Prefer mapping text-dots onto active contribution cells first
+  const destinations = [
+    ...targets.filter((t) => t.count > 0),
+    ...targets.filter((t) => t.count <= 0),
+  ];
+
+  const HOLD = 2.6;
+  const MORPH = 2.4;
+  const SETTLE = 4.2;
+  const BACK = 1.6;
+  const TOTAL = HOLD + MORPH + SETTLE + BACK;
+  const tHold = +(HOLD / TOTAL).toFixed(4);
+  const tMorphEnd = +((HOLD + MORPH) / TOTAL).toFixed(4);
+  const tSettleEnd = +((HOLD + MORPH + SETTLE) / TOTAL).toFixed(4);
+  const ease = "0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1";
+
+  const used = new Set();
+  let morphRects = "";
+
+  textDots.forEach((dot, i) => {
+    const dest = destinations[i];
+    if (!dest) return;
+    used.add(`${dest.x},${dest.y}`);
+    const x0 = +(originX + dot.x).toFixed(1);
+    const y0 = +(originY + dot.y).toFixed(1);
+    const delay = +((i % 16) * 0.03).toFixed(3);
+
+    morphRects += `<rect width="${cell}" height="${cell}" rx="2" x="${x0}" y="${y0}" fill="#5eead4">
+  <animate attributeName="x" values="${x0};${x0};${dest.x};${dest.x};${x0}" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s" calcMode="spline" keySplines="${ease}"/>
+  <animate attributeName="y" values="${y0};${y0};${dest.y};${dest.y};${y0}" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s" calcMode="spline" keySplines="${ease}"/>
+  <animate attributeName="fill" values="#5eead4;#5eead4;${dest.color};${dest.color};#5eead4" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s"/>
+</rect>
+`;
+  });
+
+  let restRects = "";
+  targets.forEach((t, i) => {
+    if (used.has(`${t.x},${t.y}`)) return;
+    const delay = +((i % 28) * 0.01).toFixed(3);
+    restRects += `<rect width="${cell}" height="${cell}" rx="2" x="${t.x}" y="${t.y}" fill="${t.color}" opacity="0">
+  <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s"/>
+</rect>
+`;
+  });
+
+  const caption = `
+  <text x="${(Math.min(areaW, heatW) / 2).toFixed(1)}" y="${heatH + 26}" text-anchor="middle" fill="${C.teal}" font-size="11" font-weight="600" font-family="${FONT}">
+    <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;${(tHold * 0.85).toFixed(4)};${tHold};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite"/>
+    ${esc(word)} contributions
+  </text>
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite"/>
+    <text x="0" y="${heatH + 26}" fill="${C.faint}" font-size="10" font-family="${FONT}">Less</text>
+    <rect x="30" y="${heatH + 18}" width="8" height="8" rx="2" fill="#1c1c22"/>
+    <rect x="42" y="${heatH + 18}" width="8" height="8" rx="2" fill="#115e59"/>
+    <rect x="54" y="${heatH + 18}" width="8" height="8" rx="2" fill="#0f766e"/>
+    <rect x="66" y="${heatH + 18}" width="8" height="8" rx="2" fill="#14b8a6"/>
+    <rect x="78" y="${heatH + 18}" width="8" height="8" rx="2" fill="#5eead4"/>
+    <text x="92" y="${heatH + 26}" fill="${C.faint}" font-size="10" font-family="${FONT}">More</text>
+    <text x="${Math.min(heatW, areaW)}" y="${heatH + 26}" text-anchor="end" fill="${C.faint}" font-size="10" font-family="${FONT}">last 12 months</text>
+  </g>`;
+
+  return `<g transform="translate(16,44)">${morphRects}${restRects}${caption}</g>`;
+}
+
 function buildCard(data) {
   const W = 920;
   const H = 500;
   const updated = new Date().toISOString().slice(0, 10);
   const line2 = [data.bio, data.location, data.status].filter(Boolean).join("  ·  ");
 
-  // grid math
   const pad = 18;
   const gap = 12;
-  const col = (W - pad * 2 - gap * 2) / 3; // 3 equal columns ≈ 286.67 — use explicit
-  // Better: left stack 580, right 292
   const leftW = 580;
-  const rightW = W - pad * 2 - gap - leftW; // 292
-  const metricW = (leftW - gap * 3) / 4; // 4 metrics under hero area... actually full width 6 metrics
+  const rightW = W - pad * 2 - gap - leftW;
 
-  // Full-width metrics: 6 cards
   const mCount = 6;
   const mW = (W - pad * 2 - gap * (mCount - 1)) / mCount;
 
@@ -207,30 +333,18 @@ function buildCard(data) {
   let metricCards = "";
   metrics.forEach(([lab, val, color], i) => {
     const x = pad + i * (mW + gap);
+    // Left accent bar — never overlaps label text
     metricCards += card(
       x,
       148,
       mW,
       78,
-      `${label(lab, 14, 24)}
-       <circle cx="14" cy="20" r="2.5" fill="${color}"/>
-       ${value(val, 14, 56, 24)}`,
+      `<rect x="0" y="14" width="3" height="50" rx="1.5" fill="${color}"/>
+       ${label(lab, 16, 28)}
+       ${value(val, 16, 58, 24)}`,
     );
   });
 
-  // heatmap — must fit inside leftW with padding
-  const cell = 8;
-  const cg = 2;
-  let cells = "";
-  data.weeks.forEach((days, wi) => {
-    days.forEach((count, di) => {
-      cells += `<rect x="${wi * (cell + cg)}" y="${di * (cell + cg)}" width="${cell}" height="${cell}" rx="2" fill="${heatColor(count, data.maxDay)}"/>`;
-    });
-  });
-  const heatH = 7 * (cell + cg) - cg;
-  const heatW = data.weeks.length * (cell + cg) - cg;
-
-  // languages
   let langRows = "";
   data.languages.forEach((lang, i) => {
     const barMax = rightW - 36;
@@ -249,7 +363,6 @@ function buildCard(data) {
   <rect width="${W}" height="${H}" rx="18" fill="${C.bg}"/>
   <rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="17.5" fill="none" stroke="${C.line}"/>
 
-  <!-- Identity -->
   ${card(
     pad,
     pad,
@@ -262,7 +375,6 @@ function buildCard(data) {
   `,
   )}
 
-  <!-- Years + total contrib -->
   ${card(
     pad + leftW + gap,
     pad,
@@ -278,7 +390,6 @@ function buildCard(data) {
 
   ${metricCards}
 
-  <!-- Heatmap -->
   ${card(
     pad,
     240,
@@ -286,21 +397,10 @@ function buildCard(data) {
     242,
     `
     ${label("CONTRIBUTION ACTIVITY", 16, 26)}
-    <g transform="translate(16,44)">${cells}</g>
-    <g transform="translate(16,${44 + heatH + 16})">
-      <text x="0" y="8" fill="${C.faint}" font-size="10" font-family="${FONT}">Less</text>
-      <rect x="30" y="0" width="8" height="8" rx="2" fill="#1c1c22"/>
-      <rect x="42" y="0" width="8" height="8" rx="2" fill="#115e59"/>
-      <rect x="54" y="0" width="8" height="8" rx="2" fill="#0f766e"/>
-      <rect x="66" y="0" width="8" height="8" rx="2" fill="#14b8a6"/>
-      <rect x="78" y="0" width="8" height="8" rx="2" fill="#5eead4"/>
-      <text x="92" y="8" fill="${C.faint}" font-size="10" font-family="${FONT}">More</text>
-      <text x="${Math.min(heatW, leftW - 40)}" y="8" text-anchor="end" fill="${C.faint}" font-size="10" font-family="${FONT}">last 12 months</text>
-    </g>
+    ${animatedContributionPanel(data, leftW)}
   `,
   )}
 
-  <!-- Languages -->
   ${card(
     pad + leftW + gap,
     240,
