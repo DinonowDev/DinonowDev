@@ -9,5 +9,5 @@
 </p>
 
 <p align="center">
-  <img src="./assets/profile-card.svg?v=5" alt="GitHub profile overview" width="900" />
+  <img src="./assets/profile-card.svg?v=6" alt="GitHub profile overview" width="900" />
 </p>

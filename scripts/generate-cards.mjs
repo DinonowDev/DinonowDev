@@ -257,6 +257,7 @@ function animatedContributionPanel(data, leftW) {
   const MORPH = 2.4;
   const SETTLE = 4.2;
   const BACK = 1.6;
+  const INTRO_DELAY = 4.6;
   const TOTAL = HOLD + MORPH + SETTLE + BACK;
   const tHold = +(HOLD / TOTAL).toFixed(4);
   const tMorphEnd = +((HOLD + MORPH) / TOTAL).toFixed(4);
@@ -273,11 +274,12 @@ function animatedContributionPanel(data, leftW) {
     const x0 = +(originX + dot.x).toFixed(1);
     const y0 = +(originY + dot.y).toFixed(1);
     const delay = +((i % 16) * 0.03).toFixed(3);
+    const begin = +(INTRO_DELAY + delay).toFixed(3);
 
     morphRects += `<rect width="${cell}" height="${cell}" rx="2" x="${x0}" y="${y0}" fill="#5eead4">
-  <animate attributeName="x" values="${x0};${x0};${dest.x};${dest.x};${x0}" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s" calcMode="spline" keySplines="${ease}"/>
-  <animate attributeName="y" values="${y0};${y0};${dest.y};${dest.y};${y0}" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s" calcMode="spline" keySplines="${ease}"/>
-  <animate attributeName="fill" values="#5eead4;#5eead4;${dest.color};${dest.color};#5eead4" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s"/>
+  <animate attributeName="x" values="${x0};${x0};${dest.x};${dest.x};${x0}" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${begin}s" calcMode="spline" keySplines="${ease}"/>
+  <animate attributeName="y" values="${y0};${y0};${dest.y};${dest.y};${y0}" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${begin}s" calcMode="spline" keySplines="${ease}"/>
+  <animate attributeName="fill" values="#5eead4;#5eead4;${dest.color};${dest.color};#5eead4" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${begin}s"/>
 </rect>
 `;
   });
@@ -285,7 +287,7 @@ function animatedContributionPanel(data, leftW) {
   let restRects = "";
   targets.forEach((t, i) => {
     if (used.has(`${t.x},${t.y}`)) return;
-    const delay = +((i % 28) * 0.01).toFixed(3);
+    const delay = +(INTRO_DELAY + (i % 28) * 0.01).toFixed(3);
     restRects += `<rect width="${cell}" height="${cell}" rx="2" x="${t.x}" y="${t.y}" fill="${t.color}" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${delay}s"/>
 </rect>
@@ -294,11 +296,11 @@ function animatedContributionPanel(data, leftW) {
 
   const caption = `
   <text x="${(Math.min(areaW, heatW) / 2).toFixed(1)}" y="${heatH + 26}" text-anchor="middle" fill="${C.teal}" font-size="11" font-weight="600" font-family="${FONT}">
-    <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;${(tHold * 0.85).toFixed(4)};${tHold};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;${(tHold * 0.85).toFixed(4)};${tHold};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${INTRO_DELAY}s"/>
     ${esc(word)} contributions
   </text>
   <g opacity="0">
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;${tHold};${tMorphEnd};${tSettleEnd};1" dur="${TOTAL}s" repeatCount="indefinite" begin="${INTRO_DELAY}s"/>
     <text x="0" y="${heatH + 26}" fill="${C.faint}" font-size="10" font-family="${FONT}">Less</text>
     <rect x="30" y="${heatH + 18}" width="8" height="8" rx="2" fill="#1c1c22"/>
     <rect x="42" y="${heatH + 18}" width="8" height="8" rx="2" fill="#115e59"/>
@@ -330,44 +332,91 @@ function animatedContributionPanel(data, leftW) {
  * retracts upward to reveal the dashboard. `fill="freeze"` keeps it open.
  */
 function openingShutter(width, height) {
-  const slatHeight = 20;
+  const slatHeight = 22;
   let slats = "";
   for (let y = slatHeight; y < height; y += slatHeight) {
-    slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="#24242a" stroke-width="1"/>`;
+    slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="#9a7419" stroke-width="1" opacity="0.42"/>`;
   }
 
   return `
   <defs>
+    <g id="cat-face">
+      <path d="M-20,-8 L-16,-27 L-5,-18 Q0,-21 5,-18 L16,-27 L20,-8 Q21,9 0,17 Q-21,9 -20,-8Z" fill="#171719"/>
+      <ellipse cx="-7" cy="-2" rx="5" ry="7" fill="#fff8dc"/>
+      <ellipse cx="7" cy="-2" rx="5" ry="7" fill="#fff8dc"/>
+      <circle cx="-6" cy="0" r="2.4" fill="#171719"/>
+      <circle cx="8" cy="0" r="2.4" fill="#171719"/>
+      <path d="M-3,8 Q0,11 3,8" fill="none" stroke="#fff8dc" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+    <pattern id="cat-print" width="240" height="180" patternUnits="userSpaceOnUse" patternTransform="rotate(-2)">
+      <use href="#cat-face" transform="translate(52 48) rotate(-8) scale(1.05)"/>
+      <use href="#cat-face" transform="translate(174 112) rotate(11) scale(0.78)"/>
+      <circle cx="12" cy="18" r="1" fill="#b98919" opacity="0.45"/>
+      <circle cx="120" cy="80" r="1.2" fill="#fff0a8" opacity="0.35"/>
+      <circle cx="220" cy="154" r="1" fill="#b98919" opacity="0.45"/>
+    </pattern>
     <clipPath id="shutter-clip">
       <rect x="0" y="0" width="${width}" height="${height}">
-        <animate attributeName="height" values="${height};${height};0" keyTimes="0;0.26;1" dur="1.8s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.22 1 0.36 1"/>
+        <animate attributeName="height" values="${height};${height};0" keyTimes="0;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.22 1 0.36 1"/>
       </rect>
     </clipPath>
-    <linearGradient id="shutter-sheen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#18181c"/>
-      <stop offset="0.5" stop-color="#101013"/>
-      <stop offset="1" stop-color="#18181c"/>
+    <linearGradient id="mustard-fabric" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8dc62"/>
+      <stop offset="0.42" stop-color="#e8bd35"/>
+      <stop offset="0.72" stop-color="#d7a824"/>
+      <stop offset="1" stop-color="#f2ca45"/>
     </linearGradient>
   </defs>
 
   <g clip-path="url(#shutter-clip)">
-    <rect width="${width}" height="${height}" rx="18" fill="url(#shutter-sheen)"/>
+    <rect width="${width}" height="${height}" rx="18" fill="url(#mustard-fabric)"/>
+    <rect width="${width}" height="${height}" rx="18" fill="url(#cat-print)"/>
     ${slats}
-    <text x="${width / 2}" y="${height / 2 - 5}" text-anchor="middle" fill="${C.text}" font-size="12" letter-spacing="0.18em" font-family="${FONT}">PULL TO OPEN</text>
-    <text x="${width / 2}" y="${height / 2 + 20}" text-anchor="middle" fill="${C.faint}" font-size="10" font-family="${FONT}">GITHUB PROFILE · ${esc(USERNAME)}</text>
-    <rect x="0" y="${height - 5}" width="${width}" height="5" fill="${C.teal}"/>
+    <rect x="${width / 2 - 132}" y="${height / 2 - 34}" width="264" height="68" rx="18" fill="#f8dc62" stroke="#171719" stroke-width="2"/>
+    <text x="${width / 2}" y="${height / 2 - 4}" text-anchor="middle" fill="#171719" font-size="13" font-weight="700" letter-spacing="0.14em" font-family="${FONT}">CURIOUS? PULL TO OPEN</text>
+    <text x="${width / 2}" y="${height / 2 + 18}" text-anchor="middle" fill="#725718" font-size="10" font-family="${FONT}">GITHUB PROFILE · ${esc(USERNAME)}</text>
+    <rect x="0" y="${height - 8}" width="${width}" height="8" fill="#171719"/>
   </g>
 
+  <!-- Pull cord -->
   <g>
-    <animate attributeName="opacity" values="1;1;1;0" keyTimes="0;0.18;0.72;1" dur="1.8s" fill="freeze"/>
-    <rect x="0" y="0" width="${width}" height="13" rx="6.5" fill="#202025" stroke="#303038"/>
-    <line x1="${width - 36}" y1="12" x2="${width - 36}" y2="112" stroke="${C.muted}" stroke-width="2">
-      <animate attributeName="y2" values="112;146;146;18" keyTimes="0;0.18;0.26;1" dur="1.8s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+    <animate attributeName="opacity" values="1;1;1;0" keyTimes="0;0.32;0.9;1" dur="4.6s" fill="freeze"/>
+    <rect x="0" y="0" width="${width}" height="16" rx="8" fill="#171719" stroke="#3a3020"/>
+    <line x1="${width - 36}" y1="14" x2="${width - 36}" y2="366" stroke="#332b1a" stroke-width="3">
+      <animate attributeName="y2" values="366;366;404;404;18" keyTimes="0;0.2;0.32;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
     </line>
+
+    <!-- Curious cat: looks around, grabs the pull, then rides upward -->
     <g>
-      <animateTransform attributeName="transform" type="translate" values="0 0;0 34;0 34;0 -94" keyTimes="0;0.18;0.26;1" dur="1.8s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
-      <rect x="${width - 45}" y="108" width="18" height="28" rx="9" fill="${C.teal}"/>
-      <circle cx="${width - 36}" cy="117" r="3" fill="${C.bg}"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 -348" keyTimes="0;0.2;0.32;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+      <path d="M${width - 125},360 C${width - 165},370 ${width - 158},326 ${width - 139},338" fill="none" stroke="#171719" stroke-width="12" stroke-linecap="round"/>
+      <ellipse cx="${width - 108}" cy="360" rx="34" ry="43" fill="#171719"/>
+      <path d="M${width - 131},319 L${width - 126},292 L${width - 112},304 Q${width - 103},300 ${width - 94},304 L${width - 79},292 L${width - 84},320 Q${width - 83},340 ${width - 107},344 Q${width - 132},340 ${width - 131},319Z" fill="#171719"/>
+      <ellipse cx="${width - 117}" cy="316" rx="6.5" ry="8" fill="#fff8dc">
+        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.32;0.38;0.44;1" dur="1.2s" repeatCount="2"/>
+      </ellipse>
+      <ellipse cx="${width - 96}" cy="316" rx="6.5" ry="8" fill="#fff8dc">
+        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.32;0.38;0.44;1" dur="1.2s" repeatCount="2"/>
+      </ellipse>
+      <circle cx="${width - 119}" cy="317" r="3" fill="#171719">
+        <animate attributeName="cx" values="${width - 119};${width - 114};${width - 120};${width - 117}" keyTimes="0;0.3;0.65;1" dur="1.35s" repeatCount="2" fill="freeze"/>
+      </circle>
+      <circle cx="${width - 98}" cy="317" r="3" fill="#171719">
+        <animate attributeName="cx" values="${width - 98};${width - 93};${width - 99};${width - 96}" keyTimes="0;0.3;0.65;1" dur="1.35s" repeatCount="2" fill="freeze"/>
+      </circle>
+      <path d="M${width - 110},329 Q${width - 106},333 ${width - 102},329" fill="none" stroke="#fff8dc" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="${width - 122}" y1="328" x2="${width - 143}" y2="324" stroke="#fff8dc" stroke-width="1.2"/>
+      <line x1="${width - 122}" y1="332" x2="${width - 144}" y2="334" stroke="#fff8dc" stroke-width="1.2"/>
+      <line x1="${width - 91}" y1="328" x2="${width - 70}" y2="324" stroke="#fff8dc" stroke-width="1.2"/>
+      <line x1="${width - 91}" y1="332" x2="${width - 69}" y2="335" stroke="#fff8dc" stroke-width="1.2"/>
+      <path d="M${width - 85},347 Q${width - 63},350 ${width - 40},364" fill="none" stroke="#171719" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="${width - 39}" cy="364" r="7" fill="#171719"/>
+    </g>
+
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 -348" keyTimes="0;0.2;0.32;0.36;1" dur="4.6s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1"/>
+      <rect x="${width - 47}" y="352" width="22" height="32" rx="11" fill="#171719"/>
+      <circle cx="${width - 36}" cy="362" r="3.5" fill="#f8dc62"/>
     </g>
   </g>`;
 }
