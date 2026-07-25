@@ -1054,19 +1054,19 @@
 <rect width="8" height="8" rx="2" x="430" y="10" fill="#1c1c22" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.42s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="430" y="20" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="430" y="20" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.43s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="430" y="30" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="430" y="30" fill="#0f766e" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.44s"/>
 </rect>
 <rect width="8" height="8" rx="2" x="430" y="40" fill="#1c1c22" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.45s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="430" y="50" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="430" y="50" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.46s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="430" y="60" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="430" y="60" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.47s"/>
 </rect>
 <rect width="8" height="8" rx="2" x="440" y="0" fill="#1c1c22" opacity="0">
@@ -1084,16 +1084,16 @@
 <rect width="8" height="8" rx="2" x="440" y="40" fill="#1c1c22" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.24s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="440" y="50" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="440" y="50" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.25s"/>
 </rect>
 <rect width="8" height="8" rx="2" x="440" y="60" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.26s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="450" y="0" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="450" y="0" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.27s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="450" y="10" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="450" y="10" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.28s"/>
 </rect>
 <rect width="8" height="8" rx="2" x="450" y="20" fill="#1c1c22" opacity="0">
@@ -1102,7 +1102,7 @@
 <rect width="8" height="8" rx="2" x="450" y="30" fill="#1c1c22" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.3s"/>
 </rect>
-<rect width="8" height="8" rx="2" x="450" y="40" fill="#1c1c22" opacity="0">
+<rect width="8" height="8" rx="2" x="450" y="40" fill="#115e59" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.31s"/>
 </rect>
 <rect width="8" height="8" rx="2" x="450" y="50" fill="#1c1c22" opacity="0">
@@ -1255,6 +1255,9 @@
 <rect width="8" height="8" rx="2" x="520" y="50" fill="#14b8a6" opacity="0">
   <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.25s"/>
 </rect>
+<rect width="8" height="8" rx="2" x="520" y="60" fill="#115e59" opacity="0">
+  <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.2407;0.463;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.26s"/>
+</rect>
 
   <text x="264.0" y="94" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">
     <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.2046;0.2407;0.8519;1" dur="10.799999999999999s" repeatCount="indefinite" begin="5.2s"/>
@@ -1274,7 +1277,7 @@
   <g transform="translate(0,122)">
     <line x1="0" y1="-12" x2="548" y2="-12" stroke="#27272a"/>
     <text x="0" y="8" fill="#a1a1aa" font-size="10" letter-spacing="0.08em" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">ACTIVE DAYS</text>
-    <text x="0" y="34" fill="#fafafa" font-size="20" font-weight="600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">241</text>
+    <text x="0" y="34" fill="#fafafa" font-size="20" font-weight="600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">250</text>
     <text x="177.33333333333334" y="8" fill="#a1a1aa" font-size="10" letter-spacing="0.08em" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">BEST DAY</text>
     <text x="177.33333333333334" y="34" fill="#fafafa" font-size="20" font-weight="600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">39</text>
     <text x="354.6666666666667" y="8" fill="#a1a1aa" font-size="10" letter-spacing="0.08em" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">AVG / ACTIVE DAY</text>
@@ -1316,7 +1319,7 @@
   
 </g>
 
-  <text x="902" y="492" text-anchor="end" fill="#52525b" font-size="9" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">2026-07-24</text>
+  <text x="902" y="492" text-anchor="end" fill="#52525b" font-size="9" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">2026-07-25</text>
   
   <defs>
     <g id="cat-face">
