@@ -257,7 +257,7 @@ function animatedContributionPanel(data, leftW) {
   const MORPH = 2.4;
   const SETTLE = 4.2;
   const BACK = 1.6;
-  const INTRO_DELAY = 5.2;
+  const INTRO_DELAY = 7.8;
   const TOTAL = HOLD + MORPH + SETTLE + BACK;
   const tHold = +(HOLD / TOTAL).toFixed(4);
   const tMorphEnd = +((HOLD + MORPH) / TOTAL).toFixed(4);
@@ -338,6 +338,44 @@ function openingShutter(width, height) {
     slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="#9a7419" stroke-width="1" opacity="0.42"/>`;
   }
 
+  // Single 7.6s storyboard shared by the blind, the cord and the cat.
+  const DUR = 7.6;
+  const at = (s) => +(s / DUR).toFixed(4);
+  const K = {
+    walkedIn: at(1.0),
+    planted: at(1.3),
+    lookAEnd: at(2.9),
+    grabbed: at(3.25),
+    yankEnd: at(3.75),
+    released: at(4.0),
+    letGo: at(4.2),
+    blindUp: at(5.5),
+    lookBEnd: at(6.5),
+  };
+  // Roller blinds travel fast then settle; keep it readable rather than snappy.
+  const BLIND_EASE = "0 0 1 1;0.45 0 0.12 1;0 0 1 1";
+
+  // Cat stands on the very bottom edge of the card; its raised paw meets the cord.
+  const catX = width - 82;
+  const catY = height - 6;
+  const cordX = width - 36;
+  const cordRestY = catY - 116;
+  const cordPullY = catY + 14 - 82;
+
+  const armRest = "M19,-72 C32,-86 42,-104 46,-116";
+  const armPull = "M19,-64 C30,-70 40,-76 44,-82";
+  // Two "check both sides" beats: one before the pull, one before slipping away.
+  const lookTimes = [
+    0, K.planted,
+    at(1.75), at(2.05), at(2.45), at(2.75), K.lookAEnd,
+    K.blindUp,
+    at(5.8), at(6.0), at(6.25), at(6.4), K.lookBEnd,
+    1,
+  ].join(";");
+  const lookAngles = [0, 0, -9, -9, 10, 10, 0, 0, -9, -9, 10, 10, 0, 0];
+  const headTurn = lookAngles.map((a) => `${a} 0 -88`).join(";");
+  const eyeShift = lookAngles.map((a) => `${a * 0.45} 0`).join(";");
+
   return `
   <defs>
     <g id="cat-face">
@@ -355,71 +393,169 @@ function openingShutter(width, height) {
       <circle cx="120" cy="80" r="1.2" fill="#fff0a8" opacity="0.35"/>
       <circle cx="220" cy="154" r="1" fill="#b98919" opacity="0.45"/>
     </pattern>
+    <clipPath id="card-clip">
+      <rect x="0" y="0" width="${width}" height="${height}" rx="18"/>
+    </clipPath>
     <clipPath id="shutter-clip">
       <rect x="0" y="0" width="${width}" height="${height}">
-        <animate attributeName="height" values="${height};${height};0;0" keyTimes="0;0.38;0.86;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.22 1 0.36 1;0 0 1 1"/>
+        <animate attributeName="height" values="${height};${height};0;0" keyTimes="0;${K.released};${K.blindUp};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="${BLIND_EASE}"/>
       </rect>
     </clipPath>
+    <filter id="cat-glow" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f8dc62" flood-opacity="0.22"/>
+    </filter>
     <linearGradient id="mustard-fabric" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#f8dc62"/>
       <stop offset="0.42" stop-color="#e8bd35"/>
       <stop offset="0.72" stop-color="#d7a824"/>
       <stop offset="1" stop-color="#f2ca45"/>
     </linearGradient>
+    <linearGradient id="blind-edge-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cat-shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
-  <g clip-path="url(#shutter-clip)">
-    <rect width="${width}" height="${height}" rx="18" fill="url(#mustard-fabric)"/>
-    <rect width="${width}" height="${height}" rx="18" fill="url(#cat-print)"/>
-    ${slats}
-    <rect x="${width / 2 - 132}" y="${height / 2 - 34}" width="264" height="68" rx="18" fill="#f8dc62" stroke="#171719" stroke-width="2"/>
-    <text x="${width / 2}" y="${height / 2 - 4}" text-anchor="middle" fill="#171719" font-size="13" font-weight="700" letter-spacing="0.14em" font-family="${FONT}">CURIOUS? PULL TO OPEN</text>
-    <text x="${width / 2}" y="${height / 2 + 18}" text-anchor="middle" fill="#725718" font-size="10" font-family="${FONT}">GITHUB PROFILE · ${esc(USERNAME)}</text>
-    <rect x="0" y="${height - 8}" width="${width}" height="8" fill="#171719"/>
-  </g>
+  <g clip-path="url(#card-clip)">
+    <g clip-path="url(#shutter-clip)">
+      <rect width="${width}" height="${height}" rx="18" fill="url(#mustard-fabric)"/>
+      <rect width="${width}" height="${height}" rx="18" fill="url(#cat-print)"/>
+      ${slats}
+      <rect x="${width / 2 - 138}" y="${height / 2 - 36}" width="276" height="72" rx="20" fill="#f8dc62" stroke="#171719" stroke-width="2"/>
+      <text x="${width / 2}" y="${height / 2 - 4}" text-anchor="middle" fill="#171719" font-size="13" font-weight="700" letter-spacing="0.14em" font-family="${FONT}">CURIOUS? PULL TO OPEN</text>
+      <text x="${width / 2}" y="${height / 2 + 18}" text-anchor="middle" fill="#725718" font-size="10" font-family="${FONT}">GITHUB PROFILE · ${esc(USERNAME)}</text>
+      <rect x="0" y="${height - 8}" width="${width}" height="8" fill="#171719"/>
+    </g>
 
-  <!-- Pull cord -->
-  <g>
-    <animate attributeName="opacity" values="1;1;1;0" keyTimes="0;0.76;0.94;1" dur="5.2s" fill="freeze"/>
-    <rect x="0" y="0" width="${width}" height="16" rx="8" fill="#171719" stroke="#3a3020"/>
-    <line x1="${width - 36}" y1="14" x2="${width - 36}" y2="366" stroke="#332b1a" stroke-width="3">
-      <animate attributeName="y2" values="366;366;404;404;18;18" keyTimes="0;0.26;0.38;0.4;0.86;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1;0 0 1 1"/>
-    </line>
+    <!-- Soft shadow that trails the rising blind -->
+    <rect x="0" y="${height}" width="${width}" height="26" fill="url(#blind-edge-shade)">
+      <animate attributeName="y" values="${height};${height};0;0" keyTimes="0;${K.released};${K.blindUp};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="${BLIND_EASE}"/>
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${K.blindUp - 0.04};${K.blindUp};1" dur="${DUR}s" fill="freeze"/>
+    </rect>
 
-    <!-- Sneaky cat: checks both sides, pulls, stays down, then escapes below -->
+    <!-- Roller bar + pull cord -->
     <g>
-      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 38;0 180" keyTimes="0;0.26;0.38;0.74;0.84;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.55 0 1 0.45"/>
-      <path d="M${width - 125},360 C${width - 165},370 ${width - 158},326 ${width - 139},338" fill="none" stroke="#171719" stroke-width="12" stroke-linecap="round"/>
-      <ellipse cx="${width - 108}" cy="360" rx="34" ry="43" fill="#171719"/>
-      <path d="M${width - 131},319 L${width - 126},292 L${width - 112},304 Q${width - 103},300 ${width - 94},304 L${width - 79},292 L${width - 84},320 Q${width - 83},340 ${width - 107},344 Q${width - 132},340 ${width - 131},319Z" fill="#171719"/>
-      <ellipse cx="${width - 117}" cy="316" rx="6.5" ry="8" fill="#fff8dc">
-        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.42;0.48;0.54;1" dur="1.8s" fill="freeze"/>
-      </ellipse>
-      <ellipse cx="${width - 96}" cy="316" rx="6.5" ry="8" fill="#fff8dc">
-        <animate attributeName="ry" values="8;8;1;8;8" keyTimes="0;0.42;0.48;0.54;1" dur="1.8s" fill="freeze"/>
-      </ellipse>
-      <circle cx="${width - 119}" cy="317" r="3" fill="#171719">
-        <animate attributeName="cx" values="${width - 117};${width - 122};${width - 112};${width - 117}" keyTimes="0;0.28;0.66;1" dur="1.8s" fill="freeze"/>
-      </circle>
-      <circle cx="${width - 98}" cy="317" r="3" fill="#171719">
-        <animate attributeName="cx" values="${width - 96};${width - 101};${width - 91};${width - 96}" keyTimes="0;0.28;0.66;1" dur="1.8s" fill="freeze"/>
-      </circle>
-      <path d="M${width - 110},329 Q${width - 106},333 ${width - 102},329" fill="none" stroke="#fff8dc" stroke-width="1.8" stroke-linecap="round"/>
-      <line x1="${width - 122}" y1="328" x2="${width - 143}" y2="324" stroke="#fff8dc" stroke-width="1.2"/>
-      <line x1="${width - 122}" y1="332" x2="${width - 144}" y2="334" stroke="#fff8dc" stroke-width="1.2"/>
-      <line x1="${width - 91}" y1="328" x2="${width - 70}" y2="324" stroke="#fff8dc" stroke-width="1.2"/>
-      <line x1="${width - 91}" y1="332" x2="${width - 69}" y2="335" stroke="#fff8dc" stroke-width="1.2"/>
+      <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${K.lookBEnd};0.96;1" dur="${DUR}s" fill="freeze"/>
+      <rect x="0" y="0" width="${width}" height="16" rx="8" fill="#171719" stroke="#3a3020"/>
+      <line x1="${cordX}" y1="14" x2="${cordX}" y2="${cordRestY}" stroke="#332b1a" stroke-width="3">
+        <animate attributeName="y2" values="${cordRestY};${cordRestY};${cordPullY};${cordPullY};18;18" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.45 0 0.12 1;0 0 1 1"/>
+      </line>
       <g>
-        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.38;0.48;1" dur="5.2s" fill="freeze"/>
-        <path d="M${width - 85},347 Q${width - 63},350 ${width - 40},364" fill="none" stroke="#171719" stroke-width="11" stroke-linecap="round"/>
-        <circle cx="${width - 39}" cy="364" r="7" fill="#171719"/>
+        <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 ${cordPullY - cordRestY};0 ${cordPullY - cordRestY};0 ${18 - cordRestY};0 ${18 - cordRestY}" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.45 0 0.12 1;0 0 1 1"/>
+        <rect x="${cordX - 11}" y="${cordRestY - 8}" width="22" height="32" rx="11" fill="#171719"/>
+        <circle cx="${cordX}" cy="${cordRestY + 2}" r="3.5" fill="#f8dc62"/>
       </g>
     </g>
 
-    <g>
-      <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 38;0 38;0 -348;0 -348" keyTimes="0;0.26;0.38;0.4;0.86;1" dur="5.2s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.22 1 0.36 1;0 0 1 1"/>
-      <rect x="${width - 47}" y="352" width="22" height="32" rx="11" fill="#171719"/>
-      <circle cx="${width - 36}" cy="362" r="3.5" fill="#f8dc62"/>
+    <!-- Sparkles on reveal -->
+    ${[
+      [width * 0.2, height * 0.32, 0],
+      [width * 0.46, height * 0.2, 0.12],
+      [width * 0.68, height * 0.4, 0.06],
+      [width * 0.84, height * 0.24, 0.18],
+      [width * 0.32, height * 0.62, 0.22],
+    ]
+      .map(([sx, sy, lag]) => {
+        const t0 = K.blindUp - 0.05 + lag * 0.35;
+        return `<g opacity="0" transform="translate(${sx.toFixed(1)},${sy.toFixed(1)})">
+      <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${t0.toFixed(4)};${(t0 + 0.02).toFixed(4)};${(t0 + 0.07).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="scale" additive="sum" values="0.2;0.2;1.25;0.4;0.4" keyTimes="0;${t0.toFixed(4)};${(t0 + 0.02).toFixed(4)};${(t0 + 0.07).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
+      <path d="M0,-11 Q1.6,-1.6 11,0 Q1.6,1.6 0,11 Q-1.6,1.6 -11,0 Q-1.6,-1.6 0,-11Z" fill="#f8dc62"/>
+    </g>`;
+      })
+      .join("\n    ")}
+
+    <!-- Sneaky cat: walks in, checks both sides, pulls the cord, then slips out the bottom -->
+    <g transform="translate(${catX},${catY})">
+      <g filter="url(#cat-glow)">
+        <animateTransform attributeName="transform" type="translate"
+          values="150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240"
+          keyTimes="0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1"
+          dur="${DUR}s" fill="freeze" calcMode="spline"
+          keySplines="0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.42 0 0.7 0.55"/>
+
+        <ellipse cx="0" cy="-2" rx="48" ry="10" fill="url(#cat-shadow)"/>
+
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="0 -22 -24;7 -22 -24;-6 -22 -24;0 -22 -24" keyTimes="0;0.33;0.7;1" dur="2.4s" repeatCount="indefinite"/>
+          <path d="M-22,-24 C-52,-26 -66,-58 -46,-76" fill="none" stroke="#17171a" stroke-width="13" stroke-linecap="round"/>
+          <circle cx="-46" cy="-76" r="7" fill="#26262c"/>
+        </g>
+
+        <ellipse cx="-17" cy="-8" rx="15" ry="9" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+        <ellipse cx="17" cy="-8" rx="15" ry="9" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+        <path d="M-26,-28 C-32,-64 -24,-90 0,-90 C24,-90 32,-64 26,-28 C22,-14 -22,-14 -26,-28 Z" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+        <ellipse cx="0" cy="-44" rx="14" ry="22" fill="#24242a"/>
+
+        <!-- Front paws resting on the ground -->
+        <g>
+          <animate attributeName="opacity" values="1;1;0;0;1;1" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};1" dur="${DUR}s" fill="freeze"/>
+          <path d="M-19,-70 C-27,-56 -27,-40 -23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
+          <path d="M19,-70 C27,-56 27,-40 23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
+          <ellipse cx="-23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
+          <ellipse cx="23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
+        </g>
+
+        <!-- Raised paw gripping the cord -->
+        <g opacity="0">
+          <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};1" dur="${DUR}s" fill="freeze"/>
+          <path d="M-19,-70 C-27,-56 -27,-40 -23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
+          <ellipse cx="-23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
+          <path d="${armRest}" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round">
+            <animate attributeName="d" values="${armRest};${armRest};${armPull};${armPull};${armRest};${armRest}" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.letGo};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.2 0.9 0.3 1;0 0 1 1"/>
+          </path>
+          <circle cx="46" cy="-116" r="9" fill="#1f1f25">
+            <animate attributeName="cx" values="46;46;44;44;46;46" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.letGo};1" dur="${DUR}s" fill="freeze"/>
+            <animate attributeName="cy" values="-116;-116;-82;-82;-116;-116" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.letGo};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.2 0.9 0.3 1;0 0 1 1"/>
+          </circle>
+        </g>
+
+        <!-- Head: turns left, then right, before and after the pull -->
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="${headTurn}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="0 -25 -126;0 -25 -126;-11 -25 -126;4 -25 -126;0 -25 -126" keyTimes="0;0.86;0.9;0.94;1" dur="3.7s" repeatCount="indefinite"/>
+            <path d="M-25,-126 L-31,-153 L-6,-136 Z" fill="#17171a"/>
+            <path d="M-23,-129 L-26,-146 L-12,-136 Z" fill="#d98a86"/>
+          </g>
+          <path d="M25,-126 L31,-153 L6,-136 Z" fill="#17171a"/>
+          <path d="M23,-129 L26,-146 L12,-136 Z" fill="#d98a86"/>
+
+          <circle cx="0" cy="-110" r="28" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+          <ellipse cx="-9" cy="-97" rx="11" ry="8" fill="#1f1f25"/>
+          <ellipse cx="9" cy="-97" rx="11" ry="8" fill="#1f1f25"/>
+
+          <line x1="-16" y1="-102" x2="-44" y2="-108" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
+          <line x1="-16" y1="-98" x2="-46" y2="-97" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
+          <line x1="-16" y1="-94" x2="-44" y2="-87" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
+          <line x1="16" y1="-102" x2="44" y2="-108" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
+          <line x1="16" y1="-98" x2="46" y2="-97" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
+          <line x1="16" y1="-94" x2="44" y2="-87" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
+
+          <ellipse cx="-11" cy="-114" rx="8.5" ry="10" fill="#f8dc62"/>
+          <ellipse cx="11" cy="-114" rx="8.5" ry="10" fill="#f8dc62"/>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+            <ellipse cx="-11" cy="-114" rx="3" ry="7.5" fill="#17171a"/>
+            <ellipse cx="11" cy="-114" rx="3" ry="7.5" fill="#17171a"/>
+            <circle cx="-13.5" cy="-118" r="1.8" fill="#fffdf2"/>
+            <circle cx="8.5" cy="-118" r="1.8" fill="#fffdf2"/>
+          </g>
+
+          <path d="M-4,-101 L4,-101 L0,-96 Z" fill="#e0a3a3"/>
+          <path d="M0,-96 Q-5,-91 -10,-94" fill="none" stroke="#9a9aa4" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M0,-96 Q5,-91 10,-94" fill="none" stroke="#9a9aa4" stroke-width="1.4" stroke-linecap="round"/>
+
+          <rect x="-26" y="-132" width="52" height="0" fill="#17171a">
+            <animate attributeName="height" values="0;0;24;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
+          </rect>
+        </g>
+      </g>
     </g>
   </g>`;
 }
