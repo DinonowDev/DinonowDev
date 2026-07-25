@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: "17 6 * * *"
   workflow_dispatch:
+    inputs:
+      theme:
+        description: "Curtain character"
+        required: false
+        default: ""
+        type: choice
+        options: ["", "random", "cat", "spiderman"]
   push:
     branches: [main]
     paths:
@@ -25,10 +32,16 @@ jobs:
         with:
           node-version: "22"
 
+      # CARD_THEME: set the repository variable (Settings -> Secrets and
+      # variables -> Actions -> Variables) to "cat" or "spiderman" to pin a
+      # character. Leave it unset for a random pick on every run.
       - name: Generate SVG card
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_USERNAME: DinonowDev
+          CARD_THEME: ${{ inputs.theme || vars.CARD_THEME }}
+          # The runner gets its own API quota, so never fall back to the snapshot here.
+          USE_MOCK: "0"
         run: node scripts/generate-cards.mjs
 
       - name: Commit & push if changed

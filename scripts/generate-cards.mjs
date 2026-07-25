@@ -11,6 +11,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const USERNAME = process.env.GH_USERNAME || "DinonowDev";
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
+/** Temporary: skip the GitHub API while rate limited. Set USE_MOCK=0 for live data. */
+const USE_MOCK = process.env.USE_MOCK !== "0";
 
 const SOCIAL = {
   telegram: { handle: "@dinonow", url: "https://t.me/dinonow" },
@@ -62,6 +64,78 @@ query ($login: String!) {
   }
 }
 `;
+
+/**
+ * Snapshot of the last live fetch, so the card can still be rebuilt while the
+ * GitHub API is rate limited. Numbers mirror the real account.
+ */
+function mockData() {
+  const contributions = 1608;
+  const activeDays = 250;
+  const maxDay = 39;
+
+  return {
+    name: "AmirHossein Rezaei",
+    login: USERNAME,
+    bio: "Front-end Developer",
+    location: "Tehran",
+    status: "Learn & Study",
+    followers: 31,
+    following: 25,
+    repos: 7,
+    stars: 32,
+    forks: 3,
+    mergedPrs: 39,
+    contributions,
+    years: 5,
+    since: 2021,
+    languages: [
+      { name: "TypeScript", pct: 54, color: "#3178c6" },
+      { name: "JavaScript", pct: 28, color: "#f1e05a" },
+      { name: "CSS", pct: 9, color: "#663399" },
+      { name: "SCSS", pct: 7, color: "#c6538c" },
+      { name: "Python", pct: 2, color: "#3572A5" },
+    ],
+    weeks: mockContributionWeeks(contributions, activeDays, maxDay),
+    maxDay,
+    activeDays,
+    averagePerActiveDay: contributions / activeDays,
+  };
+}
+
+/** Build a 53-week heatmap whose totals match the snapshot above. */
+function mockContributionWeeks(total, activeDays, maxDay) {
+  const weekCount = 53;
+  const days = Array.from({ length: weekCount * 7 }, () => 0);
+  let remaining = total;
+  let left = activeDays;
+
+  // Prefer mid-week activity so the grid looks like a real calendar.
+  const order = [];
+  for (let w = 0; w < weekCount; w++) {
+    for (const d of [1, 2, 3, 4, 0, 5, 6]) order.push(w * 7 + d);
+  }
+
+  for (const i of order) {
+    if (left <= 0 || remaining <= 0) break;
+    let count = Math.round(remaining / left + ((i * 17) % 7) - 3);
+    count = Math.max(1, Math.min(maxDay, count));
+    if (left === 1) count = Math.min(maxDay, Math.max(1, remaining));
+    days[i] = count;
+    remaining -= count;
+    left -= 1;
+  }
+
+  if (remaining !== 0) {
+    const hot = days.findIndex((c) => c > 0);
+    if (hot >= 0) days[hot] = Math.max(1, Math.min(maxDay, days[hot] + remaining));
+  }
+  days[Math.floor(weekCount / 2) * 7 + 2] = maxDay;
+
+  const weeks = [];
+  for (let w = 0; w < weekCount; w++) weeks.push(days.slice(w * 7, w * 7 + 7));
+  return weeks;
+}
 
 async function fetchUser() {
   const headers = {
@@ -328,14 +402,345 @@ function animatedContributionPanel(data, leftW) {
 }
 
 /**
+ * Both curtain characters share one local coordinate system: the origin sits
+ * between their feet on the floor, and the raised hand lands on the cord.
+ */
+const ARM_REST = "M19,-72 C32,-86 42,-104 46,-116";
+const ARM_PULL = "M19,-64 C30,-70 40,-76 44,-82";
+
+/** Swaps the resting arms for the raised, cord-gripping pose. */
+function armSwap(A, shown) {
+  const { DUR, K } = A;
+  const from = shown ? 0 : 1;
+  const to = shown ? 1 : 0;
+  return `<animate attributeName="opacity" values="${from};${from};${to};${to};${from};${from}" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};1" dur="${DUR}s" fill="freeze"/>`;
+}
+
+/**
+ * Drives the raised arm and hand down as the cord is hauled toward the floor.
+ * `edge` draws a wider stroke underneath so the limb reads against a same
+ * coloured torso.
+ */
+function pullArm(A, { arm, hand, edge }) {
+  const { DUR, K } = A;
+  const times = `0;${K.grabbed};${K.yankEnd};${K.released};${K.letGo};1`;
+  const splines = "0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.2 0.9 0.3 1;0 0 1 1";
+  const morph = `<animate attributeName="d" values="${ARM_REST};${ARM_REST};${ARM_PULL};${ARM_PULL};${ARM_REST};${ARM_REST}" keyTimes="${times}" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="${splines}"/>`;
+  const limb = (color, w) =>
+    `<path d="${ARM_REST}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round">${morph}</path>`;
+
+  return `${edge ? limb(edge, 15) : ""}
+          ${limb(arm, 12)}
+          <circle cx="46" cy="-116" r="9" fill="${hand}"${edge ? ` stroke="${edge}" stroke-width="1.6"` : ""}>
+            <animate attributeName="cx" values="46;46;44;44;46;46" keyTimes="${times}" dur="${DUR}s" fill="freeze"/>
+            <animate attributeName="cy" values="-116;-116;-82;-82;-116;-116" keyTimes="${times}" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="${splines}"/>
+          </circle>`;
+}
+
+/** Black cat with golden eyes, sitting on the floor. */
+function heroCat(A) {
+  const { DUR, lookTimes, headTurn, eyeShift } = A;
+  return `
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="0 -22 -24;7 -22 -24;-6 -22 -24;0 -22 -24" keyTimes="0;0.33;0.7;1" dur="2.4s" repeatCount="indefinite"/>
+          <path d="M-22,-24 C-52,-26 -66,-58 -46,-76" fill="none" stroke="#17171a" stroke-width="13" stroke-linecap="round"/>
+          <circle cx="-46" cy="-76" r="7" fill="#26262c"/>
+        </g>
+
+        <ellipse cx="-17" cy="-8" rx="15" ry="9" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+        <ellipse cx="17" cy="-8" rx="15" ry="9" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+        <path d="M-26,-28 C-32,-64 -24,-90 0,-90 C24,-90 32,-64 26,-28 C22,-14 -22,-14 -26,-28 Z" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+        <ellipse cx="0" cy="-44" rx="14" ry="22" fill="#24242a"/>
+
+        <g>
+          ${armSwap(A, false)}
+          <path d="M-19,-70 C-27,-56 -27,-40 -23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
+          <path d="M19,-70 C27,-56 27,-40 23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
+          <ellipse cx="-23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
+          <ellipse cx="23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
+        </g>
+
+        <g opacity="0">
+          ${armSwap(A, true)}
+          <path d="M-19,-70 C-27,-56 -27,-40 -23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
+          <ellipse cx="-23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
+          ${pullArm(A, { arm: "#17171a", hand: "#1f1f25" })}
+        </g>
+
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="${headTurn}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="0 -25 -126;0 -25 -126;-11 -25 -126;4 -25 -126;0 -25 -126" keyTimes="0;0.86;0.9;0.94;1" dur="3.7s" repeatCount="indefinite"/>
+            <path d="M-25,-126 L-31,-153 L-6,-136 Z" fill="#17171a"/>
+            <path d="M-23,-129 L-26,-146 L-12,-136 Z" fill="#d98a86"/>
+          </g>
+          <path d="M25,-126 L31,-153 L6,-136 Z" fill="#17171a"/>
+          <path d="M23,-129 L26,-146 L12,-136 Z" fill="#d98a86"/>
+
+          <circle cx="0" cy="-110" r="28" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
+          <ellipse cx="-9" cy="-97" rx="11" ry="8" fill="#1f1f25"/>
+          <ellipse cx="9" cy="-97" rx="11" ry="8" fill="#1f1f25"/>
+
+          <g stroke="#efe6cf" stroke-width="1.3" opacity="0.75">
+            <line x1="-16" y1="-102" x2="-44" y2="-108"/>
+            <line x1="-16" y1="-98" x2="-46" y2="-97"/>
+            <line x1="-16" y1="-94" x2="-44" y2="-87"/>
+            <line x1="16" y1="-102" x2="44" y2="-108"/>
+            <line x1="16" y1="-98" x2="46" y2="-97"/>
+            <line x1="16" y1="-94" x2="44" y2="-87"/>
+          </g>
+
+          <ellipse cx="-11" cy="-114" rx="8.5" ry="10" fill="#f8dc62"/>
+          <ellipse cx="11" cy="-114" rx="8.5" ry="10" fill="#f8dc62"/>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+            <ellipse cx="-11" cy="-114" rx="3" ry="7.5" fill="#17171a"/>
+            <ellipse cx="11" cy="-114" rx="3" ry="7.5" fill="#17171a"/>
+            <circle cx="-13.5" cy="-118" r="1.8" fill="#fffdf2"/>
+            <circle cx="8.5" cy="-118" r="1.8" fill="#fffdf2"/>
+          </g>
+
+          <path d="M-4,-101 L4,-101 L0,-96 Z" fill="#e0a3a3"/>
+          <path d="M0,-96 Q-5,-91 -10,-94" fill="none" stroke="#9a9aa4" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M0,-96 Q5,-91 10,-94" fill="none" stroke="#9a9aa4" stroke-width="1.4" stroke-linecap="round"/>
+
+          <rect x="-26" y="-132" width="52" height="0" fill="#17171a">
+            <animate attributeName="height" values="0;0;24;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
+          </rect>
+        </g>`;
+}
+
+/**
+ * Mask outline and eye lenses, redrawn after the classic comic mask: a tall
+ * egg-shaped head tapering to a point at the chin, with big angular
+ * "kite" lenses that come to a sharp corner toward the temple.
+ */
+const SPIDEY_MASK =
+  "M0,-160 C24,-160 36,-142 34,-118 C33,-100 28,-84 16,-74 Q0,-64 -16,-74 C-28,-84 -33,-100 -34,-118 C-36,-142 -24,-160 0,-160 Z";
+const SPIDEY_LENS_R =
+  "M6,-119 C4,-129 6,-138 13,-144 C20,-150 29,-150 35,-144 C31,-137 25,-130 19,-125 C14,-121 9,-119 6,-119 Z";
+const SPIDEY_LENS_L =
+  "M-6,-119 C-4,-129 -6,-138 -13,-144 C-20,-150 -29,-150 -35,-144 C-31,-137 -25,-130 -19,-125 C-14,-121 -9,-119 -6,-119 Z";
+
+/** One thick-stroked capsule limb, drawn twice (dark outline, then color) for a clean edge. */
+function limb(d, color, ink, w) {
+  return `<path d="${d}" fill="none" stroke="${ink}" stroke-width="${w + 3}" stroke-linecap="round"/>
+          <path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>`;
+}
+
+/** Open hook/claw hand, LEGO-minifig style: a stubby "C" instead of a mitten. */
+function claw(cx, cy, color, ink) {
+  return `<g transform="translate(${cx},${cy})">
+          <path d="M-8,-7 A10,10 0 1,0 8,-7" fill="none" stroke="${ink}" stroke-width="8.5" stroke-linecap="round"/>
+          <path d="M-8,-7 A10,10 0 1,0 8,-7" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"/>
+        </g>`;
+}
+
+/** Chibi cartoon Spider-Man with blocky, LEGO-inspired limbs; boots planted on the floor. */
+function heroSpiderMan(A) {
+  const { DUR, lookTimes, headTurn, eyeShift } = A;
+  const RED = "#e0262d";
+  const BLUE = "#1c2f8f";
+  const INK = "#101018";
+  const armL = "M-22,-80 C-32,-68 -34,-54 -30,-44";
+
+  return `
+        <rect x="-30" y="-20" width="25" height="20" rx="5" fill="${RED}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="5" y="-20" width="25" height="20" rx="5" fill="${RED}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="-23" y="-53" width="17" height="36" rx="6" fill="${BLUE}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="6" y="-53" width="17" height="36" rx="6" fill="${BLUE}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="-16" y="-58" width="32" height="14" rx="6" fill="${BLUE}" stroke="${INK}" stroke-width="1.8"/>
+
+        <path d="M-28,-50 C-33,-76 -24,-94 0,-94 C24,-94 33,-76 28,-50 C19,-41 -19,-41 -28,-50 Z" fill="${RED}" stroke="${INK}" stroke-width="1.8"/>
+        <path d="M-28,-52 C-25,-59 25,-59 28,-52 C19,-41 -19,-41 -28,-52 Z" fill="${BLUE}" stroke="${INK}" stroke-width="1.4"/>
+        <g fill="none" stroke="${INK}" stroke-width="0.9" opacity="0.5">
+          <path d="M-16,-90 C-12,-76 -13,-63 -17,-53"/>
+          <path d="M16,-90 C12,-76 13,-63 17,-53"/>
+          <path d="M-26,-79 C-11,-74 11,-74 26,-79"/>
+          <path d="M-28,-64 C-12,-59 12,-59 28,-64"/>
+        </g>
+
+        <g>
+          ${armSwap(A, false)}
+          ${limb(armL, RED, INK, 13)}
+          ${limb(armL, RED, INK, 13).replace(/<path /g, '<path transform="scale(-1,1)" ')}
+          ${claw(-30, -42, RED, INK)}
+          ${claw(30, -42, RED, INK)}
+        </g>
+
+        <g opacity="0">
+          ${armSwap(A, true)}
+          ${limb(armL, RED, INK, 13)}
+          ${claw(-30, -42, RED, INK)}
+          ${pullArm(A, { arm: RED, hand: RED, edge: INK })}
+        </g>
+
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="${headTurn}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+
+          <path d="${SPIDEY_MASK}" fill="${RED}" stroke="${INK}" stroke-width="2.2"/>
+
+          <g fill="none" stroke="${INK}" stroke-width="1" opacity="0.65">
+            <path d="M0,-159 L0,-65"/>
+            <path d="M0,-146 C-10,-140 -20,-136 -32,-133"/>
+            <path d="M0,-146 C10,-140 20,-136 32,-133"/>
+            <path d="M0,-138 C-8,-130 -16,-124 -25,-119"/>
+            <path d="M0,-138 C8,-130 16,-124 25,-119"/>
+            <path d="M0,-128 C-6,-118 -12,-108 -18,-98"/>
+            <path d="M0,-128 C6,-118 12,-108 18,-98"/>
+            <path d="M-30,-142 Q0,-152 30,-142"/>
+            <path d="M-33,-124 Q0,-137 33,-124"/>
+            <path d="M-30,-104 Q0,-118 30,-104"/>
+            <path d="M-21,-86 Q0,-98 21,-86"/>
+            <path d="M-10,-72 Q0,-66 10,-72"/>
+            <path d="M0,-138 L0,-70"/>
+          </g>
+
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+            <path d="${SPIDEY_LENS_L}" fill="${INK}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+            <path d="${SPIDEY_LENS_R}" fill="${INK}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+            <g clip-path="url(#spidey-lens-clip)">
+              <rect x="-40" y="-155" width="80" height="0" fill="#ffffff" opacity="0.85">
+                <animate attributeName="height" values="0;0;9;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
+              </rect>
+            </g>
+            <circle cx="24" cy="-141" r="1.6" fill="#f4f7ff" opacity="0.9"/>
+            <circle cx="-24" cy="-141" r="1.6" fill="#f4f7ff" opacity="0.9"/>
+          </g>
+        </g>`;
+}
+
+const CURTAIN_THEMES = {
+  cat: {
+    fabric: ["#f8dc62", "#e8bd35", "#d7a824", "#f2ca45"],
+    slat: "#9a7419",
+    plate: { fill: "#f8dc62", stroke: "#171719", text: "#171719", sub: "#725718" },
+    bar: "#171719",
+    barStroke: "#3a3020",
+    cord: "#332b1a",
+    handle: "#171719",
+    handleDot: "#f8dc62",
+    glow: "#f8dc62",
+    sparkle: "#f8dc62",
+    exit: "slideDown",
+    hero: heroCat,
+    defs: `
+    <g id="cat-face">
+      <path d="M-20,-8 L-16,-27 L-5,-18 Q0,-21 5,-18 L16,-27 L20,-8 Q21,9 0,17 Q-21,9 -20,-8Z" fill="#171719"/>
+      <ellipse cx="-7" cy="-2" rx="5" ry="7" fill="#fff8dc"/>
+      <ellipse cx="7" cy="-2" rx="5" ry="7" fill="#fff8dc"/>
+      <circle cx="-6" cy="0" r="2.4" fill="#171719"/>
+      <circle cx="8" cy="0" r="2.4" fill="#171719"/>
+      <path d="M-3,8 Q0,11 3,8" fill="none" stroke="#fff8dc" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+    <pattern id="curtain-print" width="240" height="180" patternUnits="userSpaceOnUse" patternTransform="rotate(-2)">
+      <use href="#cat-face" transform="translate(52 48) rotate(-8) scale(1.05)"/>
+      <use href="#cat-face" transform="translate(174 112) rotate(11) scale(0.78)"/>
+      <circle cx="12" cy="18" r="1" fill="#b98919" opacity="0.45"/>
+      <circle cx="120" cy="80" r="1.2" fill="#fff0a8" opacity="0.35"/>
+      <circle cx="220" cy="154" r="1" fill="#b98919" opacity="0.45"/>
+    </pattern>`,
+  },
+
+  spiderman: {
+    fabric: ["#e5323c", "#c1121f", "#9d0d18", "#d92534"],
+    slat: "#7d0f19",
+    plate: { fill: "#16205c", stroke: "#0a0e2b", text: "#ffffff", sub: "#a9b6ef" },
+    bar: "#0f1330",
+    barStroke: "#2a3468",
+    cord: "#2a3468",
+    handle: "#0f1330",
+    handleDot: "#e5323c",
+    glow: "#ff5964",
+    sparkle: "#ffd9dc",
+    exit: "webUp",
+    hero: heroSpiderMan,
+    defs: `
+    <clipPath id="spidey-lens-clip">
+      <path d="${SPIDEY_LENS_L}"/>
+      <path d="${SPIDEY_LENS_R}"/>
+    </clipPath>
+
+    <!-- Curtain print, object 1: a sleek eight-legged spider silhouette. -->
+    <g id="spider-mark">
+      <g fill="none" stroke="#171719" stroke-width="1.8" stroke-linecap="round">
+        <path d="M-3,-3 C-11,-8 -18,-8 -24,-15"/>
+        <path d="M-4,1 C-13,0 -19,3 -25,0"/>
+        <path d="M-4,5 C-12,8 -16,13 -22,14"/>
+        <path d="M-2,9 C-8,15 -10,20 -14,25"/>
+        <path d="M3,-3 C11,-8 18,-8 24,-15"/>
+        <path d="M4,1 C13,0 19,3 25,0"/>
+        <path d="M4,5 C12,8 16,13 22,14"/>
+        <path d="M2,9 C8,15 10,20 14,25"/>
+      </g>
+      <ellipse cx="0" cy="5" rx="8" ry="11" fill="#171719"/>
+      <path d="M-6,-1 Q0,3 6,-1" fill="none" stroke="#3a3a42" stroke-width="1"/>
+      <circle cx="0" cy="-7" r="6" fill="#171719"/>
+      <circle cx="-2.4" cy="-8.4" r="1.5" fill="#fff3f4"/>
+      <circle cx="2.4" cy="-8.4" r="1.5" fill="#fff3f4"/>
+      <circle cx="-2.4" cy="-8.4" r="0.6" fill="#171719"/>
+      <circle cx="2.4" cy="-8.4" r="0.6" fill="#171719"/>
+    </g>
+
+    <!-- Curtain print, object 2: a small radial web. -->
+    <g id="web-mark" stroke="#171719" fill="none" stroke-width="1" stroke-linecap="round">
+      <path d="M0,0 L0,-22 M0,0 L19,-11 M0,0 L19,11 M0,0 L0,22 M0,0 L-19,11 M0,0 L-19,-11"/>
+      <path d="M0,-7.5 Q9.5,-9 11,-3.5 Q13,4 6,7.5 Q-3,11.5 -9.5,4.5 Q-15,-1.5 -9.5,-8 Q-5,-13 0,-7.5"/>
+      <path d="M0,-15 Q16,-17 19,-7 Q22,7 10,15 Q-5,23 -16,9 Q-25,-3 -16,-16 Q-9,-24 0,-15"/>
+    </g>
+
+    <!-- Curtain print, object 3: a tiny, cute Spidey face. -->
+    <g id="spidey-face-mark" transform="scale(0.22)">
+      <path d="${SPIDEY_MASK}" fill="#e0262d" stroke="#171719" stroke-width="4.5" transform="translate(0,138)"/>
+      <path d="${SPIDEY_LENS_L}" fill="#171719" transform="translate(0,138)"/>
+      <path d="${SPIDEY_LENS_R}" fill="#171719" transform="translate(0,138)"/>
+      <g fill="none" stroke="#171719" stroke-width="2" opacity="0.6" transform="translate(0,138)">
+        <path d="M0,-159 L0,-65"/>
+        <path d="M-30,-142 Q0,-152 30,-142"/>
+        <path d="M-30,-104 Q0,-118 30,-104"/>
+      </g>
+    </g>
+
+    <pattern id="curtain-print" width="230" height="190" patternUnits="userSpaceOnUse" patternTransform="rotate(-3)">
+      <g fill="none" stroke="#7d0f19" opacity="0.5" stroke-width="1">
+        <path d="M0,0 L230,190 M230,0 L0,190"/>
+        <path d="M115,0 L230,95 L115,190 L0,95 Z"/>
+      </g>
+      <use href="#spider-mark" transform="translate(46 40) rotate(-10) scale(1.1)"/>
+      <use href="#web-mark" transform="translate(178 34) rotate(6) scale(0.85)" opacity="0.8"/>
+      <use href="#spidey-face-mark" transform="translate(120 122) rotate(-6)"/>
+      <use href="#spider-mark" transform="translate(196 150) rotate(14) scale(0.62)" opacity="0.85"/>
+      <use href="#web-mark" transform="translate(30 150) rotate(-14) scale(0.55)" opacity="0.7"/>
+    </pattern>`,
+  },
+};
+
+/**
+ * Resolve the curtain theme from CARD_THEME. Anything unset, empty or
+ * "random" rolls the dice, so the profile alternates between characters.
+ */
+function pickTheme() {
+  const names = Object.keys(CURTAIN_THEMES);
+  const want = (process.env.CARD_THEME || "").trim().toLowerCase();
+  if (want && want !== "random") {
+    if (CURTAIN_THEMES[want]) return want;
+    console.warn(`Unknown CARD_THEME "${want}". Valid values: ${names.join(", ")}, random.`);
+  }
+  return names[Math.floor(Math.random() * names.length)];
+}
+
+/**
  * A one-shot roller blind intro. The pull tab drops first, then the shutter
  * retracts upward to reveal the dashboard. `fill="freeze"` keeps it open.
  */
-function openingShutter(width, height) {
+function openingShutter(width, height, themeName) {
+  const theme = CURTAIN_THEMES[themeName] ?? CURTAIN_THEMES.cat;
   const slatHeight = 22;
   let slats = "";
   for (let y = slatHeight; y < height; y += slatHeight) {
-    slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="#9a7419" stroke-width="1" opacity="0.42"/>`;
+    slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${theme.slat}" stroke-width="1" opacity="0.42"/>`;
   }
 
   // Single 7.6s storyboard shared by the blind, the cord and the cat.
@@ -355,15 +760,13 @@ function openingShutter(width, height) {
   // Roller blinds travel fast then settle; keep it readable rather than snappy.
   const BLIND_EASE = "0 0 1 1;0.45 0 0.12 1;0 0 1 1";
 
-  // Cat stands on the very bottom edge of the card; its raised paw meets the cord.
-  const catX = width - 82;
-  const catY = height - 6;
+  // The hero stands on the very bottom edge of the card; its raised hand meets the cord.
+  const heroX = width - 82;
+  const heroY = height - 6;
   const cordX = width - 36;
-  const cordRestY = catY - 116;
-  const cordPullY = catY + 14 - 82;
+  const cordRestY = heroY - 116;
+  const cordPullY = heroY + 14 - 82;
 
-  const armRest = "M19,-72 C32,-86 42,-104 46,-116";
-  const armPull = "M19,-64 C30,-70 40,-76 44,-82";
   // Two "check both sides" beats: one before the pull, one before slipping away.
   const lookTimes = [
     0, K.planted,
@@ -375,24 +778,23 @@ function openingShutter(width, height) {
   const lookAngles = [0, 0, -9, -9, 10, 10, 0, 0, -9, -9, 10, 10, 0, 0];
   const headTurn = lookAngles.map((a) => `${a} 0 -88`).join(";");
   const eyeShift = lookAngles.map((a) => `${a * 0.45} 0`).join(";");
+  const A = { DUR, K, lookTimes, headTurn, eyeShift };
+
+  const heroTranslate =
+    theme.exit === "webUp"
+      ? {
+          values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 -460",
+          keyTimes: `0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1`,
+          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.5 0 0.85 0.35",
+        }
+      : {
+          values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240",
+          keyTimes: `0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1`,
+          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.42 0 0.7 0.55",
+        };
 
   return `
-  <defs>
-    <g id="cat-face">
-      <path d="M-20,-8 L-16,-27 L-5,-18 Q0,-21 5,-18 L16,-27 L20,-8 Q21,9 0,17 Q-21,9 -20,-8Z" fill="#171719"/>
-      <ellipse cx="-7" cy="-2" rx="5" ry="7" fill="#fff8dc"/>
-      <ellipse cx="7" cy="-2" rx="5" ry="7" fill="#fff8dc"/>
-      <circle cx="-6" cy="0" r="2.4" fill="#171719"/>
-      <circle cx="8" cy="0" r="2.4" fill="#171719"/>
-      <path d="M-3,8 Q0,11 3,8" fill="none" stroke="#fff8dc" stroke-width="1.5" stroke-linecap="round"/>
-    </g>
-    <pattern id="cat-print" width="240" height="180" patternUnits="userSpaceOnUse" patternTransform="rotate(-2)">
-      <use href="#cat-face" transform="translate(52 48) rotate(-8) scale(1.05)"/>
-      <use href="#cat-face" transform="translate(174 112) rotate(11) scale(0.78)"/>
-      <circle cx="12" cy="18" r="1" fill="#b98919" opacity="0.45"/>
-      <circle cx="120" cy="80" r="1.2" fill="#fff0a8" opacity="0.35"/>
-      <circle cx="220" cy="154" r="1" fill="#b98919" opacity="0.45"/>
-    </pattern>
+  <defs>${theme.defs}
     <clipPath id="card-clip">
       <rect x="0" y="0" width="${width}" height="${height}" rx="18"/>
     </clipPath>
@@ -401,20 +803,20 @@ function openingShutter(width, height) {
         <animate attributeName="height" values="${height};${height};0;0" keyTimes="0;${K.released};${K.blindUp};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="${BLIND_EASE}"/>
       </rect>
     </clipPath>
-    <filter id="cat-glow" x="-45%" y="-45%" width="190%" height="190%">
-      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f8dc62" flood-opacity="0.22"/>
+    <filter id="hero-glow" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="${theme.glow}" flood-opacity="0.22"/>
     </filter>
-    <linearGradient id="mustard-fabric" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f8dc62"/>
-      <stop offset="0.42" stop-color="#e8bd35"/>
-      <stop offset="0.72" stop-color="#d7a824"/>
-      <stop offset="1" stop-color="#f2ca45"/>
+    <linearGradient id="curtain-fabric" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${theme.fabric[0]}"/>
+      <stop offset="0.42" stop-color="${theme.fabric[1]}"/>
+      <stop offset="0.72" stop-color="${theme.fabric[2]}"/>
+      <stop offset="1" stop-color="${theme.fabric[3]}"/>
     </linearGradient>
     <linearGradient id="blind-edge-shade" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#000" stop-opacity="0.55"/>
       <stop offset="1" stop-color="#000" stop-opacity="0"/>
     </linearGradient>
-    <radialGradient id="cat-shadow" cx="0.5" cy="0.5" r="0.5">
+    <radialGradient id="hero-shadow" cx="0.5" cy="0.5" r="0.5">
       <stop offset="0" stop-color="#000" stop-opacity="0.55"/>
       <stop offset="1" stop-color="#000" stop-opacity="0"/>
     </radialGradient>
@@ -422,13 +824,13 @@ function openingShutter(width, height) {
 
   <g clip-path="url(#card-clip)">
     <g clip-path="url(#shutter-clip)">
-      <rect width="${width}" height="${height}" rx="18" fill="url(#mustard-fabric)"/>
-      <rect width="${width}" height="${height}" rx="18" fill="url(#cat-print)"/>
+      <rect width="${width}" height="${height}" rx="18" fill="url(#curtain-fabric)"/>
+      <rect width="${width}" height="${height}" rx="18" fill="url(#curtain-print)"/>
       ${slats}
-      <rect x="${width / 2 - 138}" y="${height / 2 - 36}" width="276" height="72" rx="20" fill="#f8dc62" stroke="#171719" stroke-width="2"/>
-      <text x="${width / 2}" y="${height / 2 - 4}" text-anchor="middle" fill="#171719" font-size="13" font-weight="700" letter-spacing="0.14em" font-family="${FONT}">CURIOUS? PULL TO OPEN</text>
-      <text x="${width / 2}" y="${height / 2 + 18}" text-anchor="middle" fill="#725718" font-size="10" font-family="${FONT}">GITHUB PROFILE · ${esc(USERNAME)}</text>
-      <rect x="0" y="${height - 8}" width="${width}" height="8" fill="#171719"/>
+      <rect x="${width / 2 - 138}" y="${height / 2 - 36}" width="276" height="72" rx="20" fill="${theme.plate.fill}" stroke="${theme.plate.stroke}" stroke-width="2"/>
+      <text x="${width / 2}" y="${height / 2 - 4}" text-anchor="middle" fill="${theme.plate.text}" font-size="13" font-weight="700" letter-spacing="0.14em" font-family="${FONT}">CURIOUS? PULL TO OPEN</text>
+      <text x="${width / 2}" y="${height / 2 + 18}" text-anchor="middle" fill="${theme.plate.sub}" font-size="10" font-family="${FONT}">GITHUB PROFILE · ${esc(USERNAME)}</text>
+      <rect x="0" y="${height - 8}" width="${width}" height="8" fill="${theme.bar}"/>
     </g>
 
     <!-- Soft shadow that trails the rising blind -->
@@ -440,14 +842,14 @@ function openingShutter(width, height) {
     <!-- Roller bar + pull cord -->
     <g>
       <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${K.lookBEnd};0.96;1" dur="${DUR}s" fill="freeze"/>
-      <rect x="0" y="0" width="${width}" height="16" rx="8" fill="#171719" stroke="#3a3020"/>
-      <line x1="${cordX}" y1="14" x2="${cordX}" y2="${cordRestY}" stroke="#332b1a" stroke-width="3">
+      <rect x="0" y="0" width="${width}" height="16" rx="8" fill="${theme.bar}" stroke="${theme.barStroke}"/>
+      <line x1="${cordX}" y1="14" x2="${cordX}" y2="${cordRestY}" stroke="${theme.cord}" stroke-width="3">
         <animate attributeName="y2" values="${cordRestY};${cordRestY};${cordPullY};${cordPullY};18;18" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.45 0 0.12 1;0 0 1 1"/>
       </line>
       <g>
         <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 ${cordPullY - cordRestY};0 ${cordPullY - cordRestY};0 ${18 - cordRestY};0 ${18 - cordRestY}" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.45 0 0.12 1;0 0 1 1"/>
-        <rect x="${cordX - 11}" y="${cordRestY - 8}" width="22" height="32" rx="11" fill="#171719"/>
-        <circle cx="${cordX}" cy="${cordRestY + 2}" r="3.5" fill="#f8dc62"/>
+        <rect x="${cordX - 11}" y="${cordRestY - 8}" width="22" height="32" rx="11" fill="${theme.handle}"/>
+        <circle cx="${cordX}" cy="${cordRestY + 2}" r="3.5" fill="${theme.handleDot}"/>
       </g>
     </g>
 
@@ -464,103 +866,64 @@ function openingShutter(width, height) {
         return `<g opacity="0" transform="translate(${sx.toFixed(1)},${sy.toFixed(1)})">
       <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${t0.toFixed(4)};${(t0 + 0.02).toFixed(4)};${(t0 + 0.07).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
       <animateTransform attributeName="transform" type="scale" additive="sum" values="0.2;0.2;1.25;0.4;0.4" keyTimes="0;${t0.toFixed(4)};${(t0 + 0.02).toFixed(4)};${(t0 + 0.07).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
-      <path d="M0,-11 Q1.6,-1.6 11,0 Q1.6,1.6 0,11 Q-1.6,1.6 -11,0 Q-1.6,-1.6 0,-11Z" fill="#f8dc62"/>
+      <path d="M0,-11 Q1.6,-1.6 11,0 Q1.6,1.6 0,11 Q-1.6,1.6 -11,0 Q-1.6,-1.6 0,-11Z" fill="${theme.sparkle}"/>
     </g>`;
       })
       .join("\n    ")}
 
-    <!-- Sneaky cat: walks in, checks both sides, pulls the cord, then slips out the bottom -->
-    <g transform="translate(${catX},${catY})">
-      <g filter="url(#cat-glow)">
+    ${theme.exit === "webUp" ? webExitLine(A, heroX, heroY) : ""}
+
+    <!-- Hero: walks in, checks both sides, pulls the cord, then leaves the scene -->
+    <g transform="translate(${heroX},${heroY})">
+      <g filter="url(#hero-glow)">
         <animateTransform attributeName="transform" type="translate"
-          values="150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240"
-          keyTimes="0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1"
+          values="${heroTranslate.values}"
+          keyTimes="${heroTranslate.keyTimes}"
           dur="${DUR}s" fill="freeze" calcMode="spline"
-          keySplines="0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.42 0 0.7 0.55"/>
+          keySplines="${heroTranslate.splines}"/>
+        ${
+          theme.exit === "webUp"
+            ? `<animateTransform attributeName="transform" type="rotate" additive="sum" values="0 0 0;0 0 0;-10 0 0;-10 0 0" keyTimes="0;${K.lookBEnd};${K.lookBEnd + 0.12};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.3 0 0.6 1;0 0 1 1"/>`
+            : ""
+        }
 
-        <ellipse cx="0" cy="-2" rx="48" ry="10" fill="url(#cat-shadow)"/>
-
-        <g>
-          <animateTransform attributeName="transform" type="rotate" values="0 -22 -24;7 -22 -24;-6 -22 -24;0 -22 -24" keyTimes="0;0.33;0.7;1" dur="2.4s" repeatCount="indefinite"/>
-          <path d="M-22,-24 C-52,-26 -66,-58 -46,-76" fill="none" stroke="#17171a" stroke-width="13" stroke-linecap="round"/>
-          <circle cx="-46" cy="-76" r="7" fill="#26262c"/>
-        </g>
-
-        <ellipse cx="-17" cy="-8" rx="15" ry="9" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
-        <ellipse cx="17" cy="-8" rx="15" ry="9" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
-        <path d="M-26,-28 C-32,-64 -24,-90 0,-90 C24,-90 32,-64 26,-28 C22,-14 -22,-14 -26,-28 Z" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
-        <ellipse cx="0" cy="-44" rx="14" ry="22" fill="#24242a"/>
-
-        <!-- Front paws resting on the ground -->
-        <g>
-          <animate attributeName="opacity" values="1;1;0;0;1;1" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};1" dur="${DUR}s" fill="freeze"/>
-          <path d="M-19,-70 C-27,-56 -27,-40 -23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
-          <path d="M19,-70 C27,-56 27,-40 23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
-          <ellipse cx="-23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
-          <ellipse cx="23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
-        </g>
-
-        <!-- Raised paw gripping the cord -->
-        <g opacity="0">
-          <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};1" dur="${DUR}s" fill="freeze"/>
-          <path d="M-19,-70 C-27,-56 -27,-40 -23,-30" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round"/>
-          <ellipse cx="-23" cy="-26" rx="10" ry="7" fill="#1f1f25"/>
-          <path d="${armRest}" fill="none" stroke="#17171a" stroke-width="12" stroke-linecap="round">
-            <animate attributeName="d" values="${armRest};${armRest};${armPull};${armPull};${armRest};${armRest}" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.letGo};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.2 0.9 0.3 1;0 0 1 1"/>
-          </path>
-          <circle cx="46" cy="-116" r="9" fill="#1f1f25">
-            <animate attributeName="cx" values="46;46;44;44;46;46" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.letGo};1" dur="${DUR}s" fill="freeze"/>
-            <animate attributeName="cy" values="-116;-116;-82;-82;-116;-116" keyTimes="0;${K.grabbed};${K.yankEnd};${K.released};${K.letGo};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.2 0.9 0.3 1;0 0 1 1"/>
-          </circle>
-        </g>
-
-        <!-- Head: turns left, then right, before and after the pull -->
-        <g>
-          <animateTransform attributeName="transform" type="rotate" values="${headTurn}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
-
-          <g>
-            <animateTransform attributeName="transform" type="rotate" values="0 -25 -126;0 -25 -126;-11 -25 -126;4 -25 -126;0 -25 -126" keyTimes="0;0.86;0.9;0.94;1" dur="3.7s" repeatCount="indefinite"/>
-            <path d="M-25,-126 L-31,-153 L-6,-136 Z" fill="#17171a"/>
-            <path d="M-23,-129 L-26,-146 L-12,-136 Z" fill="#d98a86"/>
-          </g>
-          <path d="M25,-126 L31,-153 L6,-136 Z" fill="#17171a"/>
-          <path d="M23,-129 L26,-146 L12,-136 Z" fill="#d98a86"/>
-
-          <circle cx="0" cy="-110" r="28" fill="#17171a" stroke="#43434e" stroke-width="1.4"/>
-          <ellipse cx="-9" cy="-97" rx="11" ry="8" fill="#1f1f25"/>
-          <ellipse cx="9" cy="-97" rx="11" ry="8" fill="#1f1f25"/>
-
-          <line x1="-16" y1="-102" x2="-44" y2="-108" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
-          <line x1="-16" y1="-98" x2="-46" y2="-97" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
-          <line x1="-16" y1="-94" x2="-44" y2="-87" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
-          <line x1="16" y1="-102" x2="44" y2="-108" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
-          <line x1="16" y1="-98" x2="46" y2="-97" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
-          <line x1="16" y1="-94" x2="44" y2="-87" stroke="#efe6cf" stroke-width="1.3" opacity="0.75"/>
-
-          <ellipse cx="-11" cy="-114" rx="8.5" ry="10" fill="#f8dc62"/>
-          <ellipse cx="11" cy="-114" rx="8.5" ry="10" fill="#f8dc62"/>
-          <g>
-            <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
-            <ellipse cx="-11" cy="-114" rx="3" ry="7.5" fill="#17171a"/>
-            <ellipse cx="11" cy="-114" rx="3" ry="7.5" fill="#17171a"/>
-            <circle cx="-13.5" cy="-118" r="1.8" fill="#fffdf2"/>
-            <circle cx="8.5" cy="-118" r="1.8" fill="#fffdf2"/>
-          </g>
-
-          <path d="M-4,-101 L4,-101 L0,-96 Z" fill="#e0a3a3"/>
-          <path d="M0,-96 Q-5,-91 -10,-94" fill="none" stroke="#9a9aa4" stroke-width="1.4" stroke-linecap="round"/>
-          <path d="M0,-96 Q5,-91 10,-94" fill="none" stroke="#9a9aa4" stroke-width="1.4" stroke-linecap="round"/>
-
-          <rect x="-26" y="-132" width="52" height="0" fill="#17171a">
-            <animate attributeName="height" values="0;0;24;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
-          </rect>
-        </g>
+        <ellipse cx="0" cy="-2" rx="48" ry="10" fill="url(#hero-shadow)">
+          <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${K.lookBEnd};${K.lookBEnd + 0.05};1" dur="${DUR}s" fill="freeze"/>
+        </ellipse>
+        ${theme.hero(A)}
       </g>
     </g>
   </g>`;
 }
 
-function buildCard(data) {
+/**
+ * A taut thread from a fixed anchor just under the roller bar down to the
+ * hero's hand. Drawn outside the hero's own transform, so as he rises the
+ * card's own clip-path naturally eats the slack — the thread simply gets
+ * shorter until it disappears into the anchor point.
+ */
+function webExitLine(A, heroX, heroY) {
+  const { DUR, K } = A;
+  const anchorX = heroX - 6;
+  const anchorY = 10;
+  const handY = heroY - 118;
+  const times = `0;${K.lookBEnd};${K.lookBEnd + 0.03};0.94;1`;
+  const y2 = `${handY};${handY};${handY};${anchorY - 260};${anchorY - 400}`;
+  const splines = "0 0 1 1;0 0 1 1;0.4 0 0.15 1;0 0 1 1";
+  return `
+    <g>
+      <animate attributeName="opacity" values="0;0;1;1;1" keyTimes="${times}" dur="${DUR}s" fill="freeze"/>
+      <line x1="${anchorX}" y1="${anchorY}" x2="${heroX}" y2="${handY}" stroke="#f4f7ff" stroke-width="1.6" opacity="0.9">
+        <animate attributeName="y2" values="${y2}" keyTimes="${times}" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="${splines}"/>
+      </line>
+      <g transform="translate(${anchorX},${anchorY})" opacity="0">
+        <animate attributeName="opacity" values="0;0;1;0" keyTimes="0;${K.lookBEnd};${K.lookBEnd + 0.02};${K.lookBEnd + 0.16}" dur="${DUR}s" fill="freeze"/>
+        <path d="M-9,0 L9,0 M0,-9 L0,9 M-6,-6 L6,6 M-6,6 L6,-6" stroke="#f4f7ff" stroke-width="1.6" stroke-linecap="round"/>
+      </g>
+    </g>`;
+}
+
+function buildCard(data, theme) {
   const W = 920;
   const H = 500;
   const updated = new Date().toISOString().slice(0, 10);
@@ -666,17 +1029,24 @@ function buildCard(data) {
   )}
 
   <text x="${W - pad}" y="${H - 8}" text-anchor="end" fill="${C.faint}" font-size="9" font-family="${FONT}">${updated}</text>
-  ${openingShutter(W, H)}
+  ${openingShutter(W, H, theme)}
 </svg>
 `;
 }
 
 async function main() {
-  console.log(`Fetching @${USERNAME}...`);
-  const data = aggregate(await fetchUser());
+  let data;
+  if (USE_MOCK) {
+    console.log(`Using snapshot data for @${USERNAME} (set USE_MOCK=0 for live API)...`);
+    data = mockData();
+  } else {
+    console.log(`Fetching @${USERNAME}...`);
+    data = aggregate(await fetchUser());
+  }
+  const theme = pickTheme();
   await mkdir(join(ROOT, "assets"), { recursive: true });
-  await writeFile(join(ROOT, "assets", "profile-card.svg"), buildCard(data));
-  console.log("Wrote assets/profile-card.svg");
+  await writeFile(join(ROOT, "assets", "profile-card.svg"), buildCard(data, theme));
+  console.log(`Wrote assets/profile-card.svg (curtain theme: ${theme})`);
   console.log(
     `${data.stars}★ ${data.repos} repos ${data.followers} followers ${data.mergedPrs} PRs ${data.contributions} contrib`,
   );
