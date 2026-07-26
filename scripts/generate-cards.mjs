@@ -941,8 +941,8 @@ function openingShutter(width, height, themeName) {
  */
 function webExitLine(A, heroX, heroY, width, height) {
   const { DUR, K } = A;
-  const camX = +(width * 0.48).toFixed(1);
-  const camY = +(height * 0.38).toFixed(1);
+  const camX = +(width * 0.5).toFixed(1);
+  const camY = +(height * 0.5).toFixed(1);
   // Fist while aiming toward the camera (local ≈ (-28, -128)).
   const aimX = heroX - 28;
   const aimY = heroY - 128;
@@ -953,12 +953,14 @@ function webExitLine(A, heroX, heroY, width, height) {
   const shot = +(K.camAim + 0.02).toFixed(4);
   const hit = K.camHit;
   const fadeStart = +(K.webStart + 0.05).toFixed(4);
+  // Diameter = 200% of the longer card edge so the splat floods the whole view.
+  const splatR = Math.max(width, height);
 
-  const splat = spiderWeb(0, 0, 118, {
-    spokes: 12,
-    rings: 5,
+  const splat = spiderWeb(0, 0, splatR, {
+    spokes: 16,
+    rings: 7,
     color: "#f4f7ff",
-    width: 2.2,
+    width: 2.8,
     opacity: 0.95,
   });
 
@@ -976,10 +978,10 @@ function webExitLine(A, heroX, heroY, width, height) {
     <g transform="translate(${camX},${camY})" opacity="0">
       <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${hit};${+(hit + 0.04).toFixed(4)};${fadeStart};${K.splatGone};1" dur="${DUR}s" fill="freeze"/>
       <g>
-        <animateTransform attributeName="transform" type="scale" values="0.05;0.05;1.15;1;1" keyTimes="0;${hit};${+(hit + 0.06).toFixed(4)};${+(hit + 0.14).toFixed(4)};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.15 0.7 0.25 1;0.4 0 0.6 1;0 0 1 1"/>
+        <animateTransform attributeName="transform" type="scale" values="0.02;0.02;1.08;1;1" keyTimes="0;${hit};${+(hit + 0.08).toFixed(4)};${+(hit + 0.18).toFixed(4)};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.12 0.75 0.2 1;0.4 0 0.6 1;0 0 1 1"/>
         ${splat}
-        <circle cx="0" cy="0" r="7" fill="#f4f7ff" opacity="0.85"/>
-        <circle cx="0" cy="0" r="3.2" fill="#ffffff"/>
+        <circle cx="0" cy="0" r="14" fill="#f4f7ff" opacity="0.85"/>
+        <circle cx="0" cy="0" r="6" fill="#ffffff"/>
       </g>
     </g>
 
