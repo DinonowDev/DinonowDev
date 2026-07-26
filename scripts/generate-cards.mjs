@@ -788,7 +788,9 @@ function openingShutter(width, height, themeName) {
     // Spidey climb after the camera splat sticks.
     webStart: at(5.5),
     gone: at(10.4),
-    splatGone: at(10.85),
+    // Camera splat fades early so the dashboard reads cleanly during the climb.
+    splatFade: at(5.0),
+    splatGone: at(7.0),
   };
   // Roller blinds travel fast then settle; keep it readable rather than snappy.
   const BLIND_EASE = "0 0 1 1;0.45 0 0.12 1;0 0 1 1";
@@ -952,15 +954,15 @@ function webExitLine(A, heroX, heroY, width, height) {
   const topY = 8;
   const shot = +(K.camAim + 0.02).toFixed(4);
   const hit = K.camHit;
-  const fadeStart = +(K.webStart + 0.05).toFixed(4);
-  // Diameter = 200% of the longer card edge so the splat floods the whole view.
-  const splatR = Math.max(width, height);
+  const fadeStart = K.splatFade;
+  // Diameter = 150% of the longer card edge.
+  const splatR = Math.max(width, height) * 0.75;
 
   const splat = spiderWeb(0, 0, splatR, {
-    spokes: 16,
-    rings: 7,
+    spokes: 14,
+    rings: 6,
     color: "#f4f7ff",
-    width: 2.8,
+    width: 2.4,
     opacity: 0.95,
   });
 
@@ -974,14 +976,14 @@ function webExitLine(A, heroX, heroY, width, height) {
       </line>
     </g>
 
-    <!-- Web splat stuck on the camera — grows on impact, then slowly fades -->
+    <!-- Web splat stuck on the camera — grows on impact, then fades early -->
     <g transform="translate(${camX},${camY})" opacity="0">
       <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${hit};${+(hit + 0.04).toFixed(4)};${fadeStart};${K.splatGone};1" dur="${DUR}s" fill="freeze"/>
       <g>
         <animateTransform attributeName="transform" type="scale" values="0.02;0.02;1.08;1;1" keyTimes="0;${hit};${+(hit + 0.08).toFixed(4)};${+(hit + 0.18).toFixed(4)};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.12 0.75 0.2 1;0.4 0 0.6 1;0 0 1 1"/>
         ${splat}
-        <circle cx="0" cy="0" r="14" fill="#f4f7ff" opacity="0.85"/>
-        <circle cx="0" cy="0" r="6" fill="#ffffff"/>
+        <circle cx="0" cy="0" r="12" fill="#f4f7ff" opacity="0.85"/>
+        <circle cx="0" cy="0" r="5" fill="#ffffff"/>
       </g>
     </g>
 
