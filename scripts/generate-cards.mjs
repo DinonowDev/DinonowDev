@@ -11,8 +11,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const USERNAME = process.env.GH_USERNAME || "DinonowDev";
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
-/** Temporary: skip the GitHub API while rate limited. Set USE_MOCK=0 for live data. */
-const USE_MOCK = process.env.USE_MOCK !== "0";
 
 const SOCIAL = {
   telegram: { handle: "@dinonow", url: "https://t.me/dinonow" },
@@ -45,15 +43,23 @@ query ($login: String!) {
     status { message }
     followers { totalCount }
     following { totalCount }
-    pullRequests(states: MERGED) { totalCount }
     repositories(first: 100, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC) {
       totalCount
       nodes {
-        stargazerCount forkCount
+        stargazerCount
         languages(first: 12, orderBy: { field: SIZE, direction: DESC }) {
           edges { size node { name color } }
         }
       }
+    }
+    repositoriesContributedTo(
+      first: 100
+      contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]
+      includeUserRepositories: false
+      privacy: PUBLIC
+    ) {
+      totalCount
+      nodes { nameWithOwner stargazerCount url }
     }
     contributionsCollection {
       contributionCalendar {
@@ -64,78 +70,6 @@ query ($login: String!) {
   }
 }
 `;
-
-/**
- * Snapshot of the last live fetch, so the card can still be rebuilt while the
- * GitHub API is rate limited. Numbers mirror the real account.
- */
-function mockData() {
-  const contributions = 1608;
-  const activeDays = 250;
-  const maxDay = 39;
-
-  return {
-    name: "AmirHossein Rezaei",
-    login: USERNAME,
-    bio: "Front-end Developer",
-    location: "Tehran",
-    status: "Learn & Study",
-    followers: 31,
-    following: 25,
-    repos: 7,
-    stars: 32,
-    forks: 3,
-    mergedPrs: 39,
-    contributions,
-    years: 5,
-    since: 2021,
-    languages: [
-      { name: "TypeScript", pct: 54, color: "#3178c6" },
-      { name: "JavaScript", pct: 28, color: "#f1e05a" },
-      { name: "CSS", pct: 9, color: "#663399" },
-      { name: "SCSS", pct: 7, color: "#c6538c" },
-      { name: "Python", pct: 2, color: "#3572A5" },
-    ],
-    weeks: mockContributionWeeks(contributions, activeDays, maxDay),
-    maxDay,
-    activeDays,
-    averagePerActiveDay: contributions / activeDays,
-  };
-}
-
-/** Build a 53-week heatmap whose totals match the snapshot above. */
-function mockContributionWeeks(total, activeDays, maxDay) {
-  const weekCount = 53;
-  const days = Array.from({ length: weekCount * 7 }, () => 0);
-  let remaining = total;
-  let left = activeDays;
-
-  // Prefer mid-week activity so the grid looks like a real calendar.
-  const order = [];
-  for (let w = 0; w < weekCount; w++) {
-    for (const d of [1, 2, 3, 4, 0, 5, 6]) order.push(w * 7 + d);
-  }
-
-  for (const i of order) {
-    if (left <= 0 || remaining <= 0) break;
-    let count = Math.round(remaining / left + ((i * 17) % 7) - 3);
-    count = Math.max(1, Math.min(maxDay, count));
-    if (left === 1) count = Math.min(maxDay, Math.max(1, remaining));
-    days[i] = count;
-    remaining -= count;
-    left -= 1;
-  }
-
-  if (remaining !== 0) {
-    const hot = days.findIndex((c) => c > 0);
-    if (hot >= 0) days[hot] = Math.max(1, Math.min(maxDay, days[hot] + remaining));
-  }
-  days[Math.floor(weekCount / 2) * 7 + 2] = maxDay;
-
-  const weeks = [];
-  for (let w = 0; w < weekCount; w++) weeks.push(days.slice(w * 7, w * 7 + 7));
-  return weeks;
-}
 
 async function fetchUser() {
   const headers = {
@@ -158,11 +92,9 @@ function aggregate(user) {
   const langBytes = new Map();
   const langColor = new Map();
   let stars = 0;
-  let forks = 0;
 
   for (const repo of user.repositories.nodes) {
     stars += repo.stargazerCount;
-    forks += repo.forkCount;
     for (const edge of repo.languages.edges) {
       const name = edge.node.name;
       if (HIDE_LANGS.has(name)) continue;
@@ -193,6 +125,13 @@ function aggregate(user) {
     Math.floor((Date.now() - created.getTime()) / (365.25 * 24 * 3600 * 1000)),
   );
 
+  const contributedRepos = (user.repositoriesContributedTo?.nodes || []).map((repo) => ({
+    name: repo.nameWithOwner,
+    stars: repo.stargazerCount,
+    url: repo.url,
+  }));
+  const contributedStars = contributedRepos.reduce((sum, repo) => sum + repo.stars, 0);
+
   return {
     name: user.name || user.login,
     login: user.login,
@@ -203,8 +142,9 @@ function aggregate(user) {
     following: user.following.totalCount,
     repos: user.repositories.totalCount,
     stars,
-    forks,
-    mergedPrs: user.pullRequests?.totalCount ?? 0,
+    contributedRepoCount: user.repositoriesContributedTo?.totalCount ?? contributedRepos.length,
+    contributedStars,
+    contributedRepos,
     contributions: cal.totalContributions,
     years,
     since: created.getFullYear(),
@@ -657,7 +597,7 @@ function heroSpiderMan(A) {
 
 /** Classic 1989-style bat emblem (for chest + Bat-Signal). */
 const BAT_EMBLEM =
-  "M0,-8 L-5,-22 L0,-12 L5,-22 L0,-8 C-18,-10 -36,0 -56,10 L-48,12 L-44,20 L-36,14 L-30,22 L-20,16 L-12,24 L0,18 L12,24 L20,16 L30,22 L36,14 L44,20 L48,12 L56,10 C36,0 18,-10 0,-8 Z";
+  "M0,-4 L-5,-15 L-6,-5 C-15,-11 -27,-13 -39,-9 C-47,-7 -53,-2 -58,4 L-45,1 C-46,7 -43,12 -37,15 C-33,11 -28,10 -23,13 C-22,18 -17,22 -11,23 C-8,18 -4,15 0,21 C4,15 8,18 11,23 C17,22 22,18 23,13 C28,10 33,11 37,15 C43,12 46,7 45,1 L58,4 C53,-2 47,-7 39,-9 C27,-13 15,-11 6,-5 L5,-15 Z";
 
 /** Tiny flying-bat silhouette for curtain + exit swarm. */
 const BAT_FLY =
@@ -667,69 +607,98 @@ const BAT_FLY =
 function heroBatman(A) {
   const { DUR, K, lookTimes, headTurn, eyeShift } = A;
   const BLACK = "#0e1016";
-  const GRAY = "#2a2e3a";
+  const GRAY = "#4a4f59";
   const SKIN = "#d4a574";
   const YELLOW = "#f5d76e";
   const INK = "#07080c";
-  const armL = "M-24,-84 C-38,-70 -40,-54 -36,-42";
-  const armR = "M24,-84 C38,-70 40,-54 36,-42";
+  const armL = "M-29,-89 C-43,-79 -47,-58 -38,-42";
+  const armR = "M29,-89 C43,-79 47,-58 38,-42";
 
   return `
         <g transform="scale(1.35)">
         <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${K.board};${+(K.board + 0.03).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
-        <!-- Cape -->
-        <path d="M-28,-96 C-78,-88 -86,-28 -62,10 C-36,-6 -12,0 0,-2 C12,0 36,-6 62,10 C86,-28 78,-88 28,-96 C14,-108 0,-110 -28,-96 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.6"/>
+        <!-- Two hanging cape panels leave the suit visible, like the reference -->
+        <path d="M-26,-100 C-44,-101 -56,-90 -61,-74 L-75,7 L-57,-8 L-45,8 L-36,-20 L-30,-54 L-20,-97 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M26,-100 C44,-101 56,-90 61,-74 L75,7 L57,-8 L45,8 L36,-20 L30,-54 L20,-97 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M-48,-89 L-57,-12 M48,-89 L57,-12" fill="none" stroke="#242936" stroke-width="1.4" opacity="0.9"/>
 
-        <rect x="-30" y="-18" width="26" height="18" rx="5" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
-        <rect x="4" y="-18" width="26" height="18" rx="5" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
-        <rect x="-24" y="-56" width="18" height="40" rx="6" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
-        <rect x="6" y="-56" width="18" height="40" rx="6" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
-        <rect x="-18" y="-62" width="36" height="14" rx="6" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+        <!-- Gray legs, black trunks and substantial boots -->
+        <path d="M-29,-30 L-3,-30 L-2,-7 L-17,-3 L-31,-13 Z" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+        <path d="M29,-30 L3,-30 L2,-7 L17,-3 L31,-13 Z" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+        <path d="M-27,-17 L-4,-14 L-4,0 L-32,0 Q-34,-10 -27,-17 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
+        <path d="M27,-17 L4,-14 L4,0 L32,0 Q34,-10 27,-17 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
+        <path d="M-28,-36 L28,-36 L20,-18 L0,-12 L-20,-18 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
 
-        <path d="M-30,-54 C-36,-82 -26,-100 0,-100 C26,-100 36,-82 30,-54 C20,-44 -20,-44 -30,-54 Z" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+        <!-- Broad gray torso with classic paneling -->
+        <path d="M-32,-101 Q0,-112 32,-101 L42,-76 L35,-47 L26,-36 L-26,-36 L-35,-47 L-42,-76 Z" fill="${GRAY}" stroke="${INK}" stroke-width="2"/>
+        <path d="M0,-103 L0,-48 M-32,-83 Q0,-69 32,-83" fill="none" stroke="#3a4050" stroke-width="1.3" opacity="0.9"/>
         <ellipse cx="0" cy="-76" rx="18" ry="13" fill="${YELLOW}" stroke="${INK}" stroke-width="1.6"/>
         <path d="${BAT_EMBLEM}" fill="${INK}" transform="translate(0,-76) scale(0.58)"/>
+        <!-- Segmented yellow utility belt -->
+        <path d="M-34,-48 L34,-48 L32,-35 L-32,-35 Z" fill="${YELLOW}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="-8" y="-47" width="16" height="11" rx="2" fill="#e4b72f" stroke="${INK}" stroke-width="1.3"/>
+        <path d="M-23,-47 L-22,-36 M-13,-47 L-13,-36 M13,-47 L13,-36 M23,-47 L22,-36" stroke="${INK}" stroke-width="1.2"/>
+
+        <!-- Gray shoulders under black gauntlets -->
+        <path d="M-29,-91 C-43,-87 -49,-75 -46,-62 M29,-91 C43,-87 49,-75 46,-62" fill="none" stroke="${INK}" stroke-width="20" stroke-linecap="round"/>
+        <path d="M-29,-91 C-43,-87 -49,-75 -46,-62 M29,-91 C43,-87 49,-75 46,-62" fill="none" stroke="${GRAY}" stroke-width="16" stroke-linecap="round"/>
 
         <g>
           ${armSwap(A, false)}
           ${limb(armL, BLACK, INK, 13)}
           ${limb(armR, BLACK, INK, 13)}
-          ${fist(-36, -40, BLACK, INK)}
-          ${fist(36, -40, BLACK, INK)}
+          <path d="M-43,-61 L-54,-68 L-48,-55 Z M43,-61 L54,-68 L48,-55 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.2"/>
+          ${fist(-38, -40, BLACK, INK)}
+          ${fist(38, -40, BLACK, INK)}
         </g>
 
         <g opacity="0">
           ${armSwap(A, true)}
           ${limb(armL, BLACK, INK, 13)}
-          ${fist(-36, -40, BLACK, INK)}
+          ${fist(-38, -40, BLACK, INK)}
           ${pullArm(A, { arm: BLACK, hand: BLACK, edge: INK })}
         </g>
 
-        <g>
-          <animateTransform attributeName="transform" type="rotate" values="${headTurn}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+        <!-- Lift the cowl clear of the chest while preserving the approved face -->
+        <g transform="translate(0,-61) scale(0.65)">
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="${headTurn}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
 
-          <!-- Tall vertical pointed ears -->
-          <path d="M-13,-150 L-15,-204 L-6,-154 Z" fill="${BLACK}"/>
-          <path d="M13,-150 L15,-204 L6,-154 Z" fill="${BLACK}"/>
-          <!-- Cowl skull -->
-          <path d="M0,-160 C24,-160 36,-140 34,-112 C32,-92 24,-78 14,-70 L14,-52 C8,-48 -8,-48 -14,-52 L-14,-70 C-24,-78 -32,-92 -34,-112 C-36,-140 -24,-160 0,-160 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
-          <!-- Brow crease -->
-          <path d="M-16,-148 Q0,-152 16,-148" fill="none" stroke="#1c2030" stroke-width="1.4"/>
-          <!-- Angular nose bridge -->
-          <path d="M0,-118 L-5,-102 L0,-98 L5,-102 Z" fill="#1a1e28"/>
-          <!-- Narrow white eye slits — angled up toward the ears -->
+          <!-- Broad classic cowl with integrated pointed ears -->
+          <path d="M-39,-88
+            C-43,-112 -42,-139 -33,-157
+            L-28,-204 L-11,-165
+            Q0,-170 11,-165
+            L28,-204 L33,-157
+            C42,-139 43,-112 39,-88
+            L33,-63 Q24,-54 15,-50
+            L14,-43 Q0,-36 -14,-43
+            L-15,-50 Q-24,-54 -33,-63 Z"
+            fill="${BLACK}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+          <!-- Ear insets and forehead contour -->
+          <path d="M-27,-194 L-21,-164 L-12,-158" fill="none" stroke="#242936" stroke-width="1.8"/>
+          <path d="M27,-194 L21,-164 L12,-158" fill="none" stroke="#242936" stroke-width="1.8"/>
+          <path d="M-21,-151 Q0,-158 21,-151" fill="none" stroke="#242936" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Wide, sharply angled white eye slits -->
           <g>
             <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
-            <path d="M-6,-118 L-27,-132 L-25,-124 L-5,-114 Z" fill="#f4f7ff"/>
-            <path d="M6,-118 L27,-132 L25,-124 L5,-114 Z" fill="#f4f7ff"/>
+            <path d="M-5,-121 L-33,-134 Q-27,-120 -18,-115 Q-10,-115 -5,-121 Z" fill="#f4f7ff" stroke="${INK}" stroke-width="1.2"/>
+            <path d="M5,-121 L33,-134 Q27,-120 18,-115 Q10,-115 5,-121 Z" fill="#f4f7ff" stroke="${INK}" stroke-width="1.2"/>
           </g>
-          <!-- Exposed jaw window (classic cowl cutout) -->
-          <path d="M-13,-86 C-13,-70 -8,-63 0,-63 C8,-63 13,-70 13,-86 L9,-90 C6,-78 0,-76 -6,-78 Z" fill="${SKIN}"/>
-          <path d="M-9,-76 Q0,-72 9,-76" fill="none" stroke="${INK}" stroke-width="1.9" stroke-linecap="round"/>
-          <path d="M-5,-72 Q0,-70 5,-72" fill="none" stroke="${INK}" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+          <!-- Large exposed jaw window and angular nose -->
+          <path d="M-31,-104
+            C-25,-96 -23,-87 -21,-76
+            L-14,-58 Q0,-50 14,-58
+            L21,-76 C23,-87 25,-96 31,-104
+            Q16,-96 0,-92 Q-16,-96 -31,-104 Z"
+            fill="${SKIN}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M0,-125 L-7,-101 L0,-94 L7,-101 Z" fill="#181c26" stroke="${INK}" stroke-width="1.2"/>
+          <path d="M-10,-72 Q-4,-77 0,-74 Q4,-77 10,-72" fill="none" stroke="${INK}" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M-7,-66 Q0,-64 7,-66" fill="none" stroke="${INK}" stroke-width="1.4" stroke-linecap="round"/>
           <!-- Neck folds into shoulders -->
           <path d="M-20,-52 C-28,-48 -32,-40 -30,-34" fill="none" stroke="#1c2030" stroke-width="1.3"/>
           <path d="M20,-52 C28,-48 32,-40 30,-34" fill="none" stroke="#1c2030" stroke-width="1.3"/>
+          </g>
         </g>
         </g>`;
 }
@@ -849,12 +818,7 @@ const CURTAIN_THEMES = {
     <g id="bat-emblem">
       <ellipse cx="0" cy="0" rx="46" ry="26" fill="#f5d76e"/>
       <ellipse cx="0" cy="0" rx="46" ry="26" fill="none" stroke="#0a0c14" stroke-width="3"/>
-      <g fill="#0a0c14" transform="translate(0,1) scale(0.72)">
-        <path d="M0,-6 C-18,-8 -36,0 -56,10 L-48,12 L-44,20 L-36,14 L-30,22 L-20,16 L-12,24 L0,18 L0,-6 Z"/>
-        <path d="M0,-6 C18,-8 36,0 56,10 L48,12 L44,20 L36,14 L30,22 L20,16 L12,24 L0,18 L0,-6 Z"/>
-        <path d="M0,-8 L-5,-22 L0,-12 Z"/>
-        <path d="M0,-8 L5,-22 L0,-12 Z"/>
-      </g>
+      <path d="${BAT_EMBLEM}" fill="#0a0c14" transform="translate(0,-1) scale(0.72)"/>
     </g>
     <g id="bat-fly">
       <path d="${BAT_FLY}" fill="#0a0c14"/>
@@ -873,23 +837,24 @@ const CURTAIN_THEMES = {
     </pattern>`,
     curtainExtra: (w, h) => {
       const cx = w * 0.5;
-      const cy = h * 0.36;
+      const signalY = h * 0.21;
       return `
       <!-- Searchlight cone from the ground up into the night sky -->
-      <path d="M${cx - 28},${h - 8} L${cx - 175},${cy + 90} L${cx + 175},${cy + 90} L${cx + 28},${h - 8} Z" fill="url(#bat-beam)" opacity="0.9"/>
-      <ellipse cx="${cx}" cy="${cy}" rx="168" ry="122" fill="url(#bat-signal-glow)"/>
+      <path d="M${cx - 28},${h - 8} L${cx - 94},${signalY + 59} L${cx + 94},${signalY + 59} L${cx + 28},${h - 8} Z" fill="url(#bat-beam)" opacity="0.9"/>
+      <ellipse cx="${cx}" cy="${signalY}" rx="112" ry="80" fill="url(#bat-signal-glow)"/>
+      <!-- Cloud wisps stay behind the signal so the emblem remains readable -->
+      <ellipse cx="${cx - 150}" cy="${signalY + 25}" rx="58" ry="20" fill="#1a2748" opacity="0.4"/>
+      <ellipse cx="${cx + 155}" cy="${signalY + 111}" rx="64" ry="22" fill="#1a2748" opacity="0.35"/>
+      <ellipse cx="${cx + 40}" cy="${signalY + 5}" rx="40" ry="14" fill="#1a2748" opacity="0.25"/>
       <!-- Classic yellow-oval Bat-Signal -->
-      <use href="#bat-emblem" transform="translate(${cx} ${cy + 4}) scale(4.2)"/>
-      <!-- Soft cloud wisps + extra bats around the signal -->
-      <ellipse cx="${cx - 150}" cy="${cy - 50}" rx="58" ry="20" fill="#1a2748" opacity="0.4"/>
-      <ellipse cx="${cx + 155}" cy="${cy + 36}" rx="64" ry="22" fill="#1a2748" opacity="0.35"/>
-      <ellipse cx="${cx + 40}" cy="${cy - 70}" rx="40" ry="14" fill="#1a2748" opacity="0.25"/>
-      <use href="#bat-fly" transform="translate(${cx - 210} ${cy + 40}) rotate(-25) scale(2.2)" opacity="0.7"/>
-      <use href="#bat-fly" transform="translate(${cx + 200} ${cy - 20}) rotate(18) scale(1.9)" opacity="0.6"/>
-      <use href="#bat-fly" transform="translate(${cx - 80} ${cy + 110}) rotate(10) scale(1.5)" opacity="0.55"/>
-      <use href="#bat-fly" transform="translate(${cx + 110} ${cy + 95}) rotate(-12) scale(1.7)" opacity="0.6"/>
-      <use href="#bat-fly" transform="translate(${cx - 170} ${cy - 80}) rotate(30) scale(1.3)" opacity="0.5"/>
-      <use href="#bat-fly" transform="translate(${cx + 160} ${cy + 70}) rotate(-20) scale(1.4)" opacity="0.55"/>`;
+      <use href="#bat-emblem" transform="translate(${cx} ${signalY}) scale(2.3)"/>
+      <!-- Extra bats around the signal -->
+      <use href="#bat-fly" transform="translate(${cx - 210} ${signalY + 115}) rotate(-25) scale(2.2)" opacity="0.7"/>
+      <use href="#bat-fly" transform="translate(${cx + 200} ${signalY + 55}) rotate(18) scale(1.9)" opacity="0.6"/>
+      <use href="#bat-fly" transform="translate(${cx - 80} ${signalY + 185}) rotate(10) scale(1.5)" opacity="0.55"/>
+      <use href="#bat-fly" transform="translate(${cx + 110} ${signalY + 170}) rotate(-12) scale(1.7)" opacity="0.6"/>
+      <use href="#bat-fly" transform="translate(${cx - 170} ${signalY - 5}) rotate(30) scale(1.3)" opacity="0.5"/>
+      <use href="#bat-fly" transform="translate(${cx + 160} ${signalY + 145}) rotate(-20) scale(1.4)" opacity="0.55"/>`;
     },
   },
 
@@ -1281,13 +1246,24 @@ function batmobileExit(A, heroX, heroY, width, height) {
       <use href="#bat-emblem" transform="translate(10 -36) scale(0.55)" opacity="0.9"/>
 
       <!-- Batman silhouette in the cockpit after boarding -->
-      <g opacity="0" transform="translate(4, -70)">
+      <g opacity="0" transform="translate(4,-70) scale(0.78)">
         <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.board};${+(K.board + 0.04).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
-        <path d="M-9,-20 L-13,-40 L-2,-22 Z" fill="${BLACK}"/>
-        <path d="M9,-20 L13,-40 L2,-22 Z" fill="${BLACK}"/>
-        <ellipse cx="0" cy="-16" rx="13" ry="15" fill="${BLACK}"/>
-        <path d="M-9,-18 L-18,-21 L-16,-14 L-6,-12 Z" fill="#f4f7ff"/>
-        <path d="M9,-18 L18,-21 L16,-14 L6,-12 Z" fill="#f4f7ff"/>
+        <!-- Cape and shoulders visible through the canopy -->
+        <path d="M-10,-7 C-20,-6 -27,0 -30,10 L30,10 C27,0 20,-6 10,-7 Q0,-2 -10,-7 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.5"/>
+        <!-- Miniature version of the classic cowl -->
+        <path d="M-13,-13
+          C-15,-23 -14,-31 -10,-36
+          L-8,-50 L-3,-37
+          Q0,-39 3,-37
+          L8,-50 L10,-36
+          C14,-31 15,-23 13,-13
+          L10,-7 Q0,-2 -10,-7 Z"
+          fill="${BLACK}" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M-2,-25 L-11,-30 Q-9,-24 -6,-22 Q-4,-22 -2,-25 Z" fill="#f4f7ff"/>
+        <path d="M2,-25 L11,-30 Q9,-24 6,-22 Q4,-22 2,-25 Z" fill="#f4f7ff"/>
+        <path d="M-10,-19 Q-6,-15 0,-14 Q6,-15 10,-19 L7,-8 Q0,-3 -7,-8 Z" fill="#d4a574" stroke="${INK}" stroke-width="1"/>
+        <path d="M0,-26 L-3,-18 L0,-15 L3,-18 Z" fill="#181c26"/>
+        <path d="M-4,-9 Q0,-7 4,-9" fill="none" stroke="${INK}" stroke-width="1.1" stroke-linecap="round"/>
       </g>
     </g>`;
 }
@@ -1312,8 +1288,8 @@ function buildCard(data, theme) {
     ["REPOS", fmt(data.repos), C.sky],
     ["FOLLOWERS", fmt(data.followers), C.violet],
     ["FOLLOWING", fmt(data.following), C.rose],
-    ["MERGED PRS", fmt(data.mergedPrs), C.teal],
-    ["FORKS", fmt(data.forks), C.green],
+    ["CONTRIB REPOS", fmt(data.contributedRepoCount), C.teal],
+    ["OSS STARS", fmt(data.contributedStars), C.green],
   ];
 
   let metricCards = "";
@@ -1405,21 +1381,20 @@ function buildCard(data, theme) {
 }
 
 async function main() {
-  let data;
-  if (USE_MOCK) {
-    console.log(`Using snapshot data for @${USERNAME} (set USE_MOCK=0 for live API)...`);
-    data = mockData();
-  } else {
-    console.log(`Fetching @${USERNAME}...`);
-    data = aggregate(await fetchUser());
-  }
+  console.log(`Fetching @${USERNAME}...`);
+  const data = aggregate(await fetchUser());
   const theme = pickTheme();
   await mkdir(join(ROOT, "assets"), { recursive: true });
   await writeFile(join(ROOT, "assets", "profile-card.svg"), buildCard(data, theme));
   console.log(`Wrote assets/profile-card.svg (curtain theme: ${theme})`);
   console.log(
-    `${data.stars}★ ${data.repos} repos ${data.followers} followers ${data.mergedPrs} PRs ${data.contributions} contrib`,
+    `${data.stars}★ own · ${data.contributedRepoCount} contrib repos · ${fmt(data.contributedStars)} OSS ★ · ${fmt(data.contributions)} calendar`,
   );
+  if (data.contributedRepos?.length) {
+    for (const repo of data.contributedRepos) {
+      console.log(`  - ${repo.name} (${fmt(repo.stars)}★)`);
+    }
+  }
 }
 
 main().catch((e) => {

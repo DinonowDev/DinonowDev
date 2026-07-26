@@ -40,8 +40,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_USERNAME: DinonowDev
           CARD_THEME: ${{ inputs.theme || vars.CARD_THEME }}
-          # The runner gets its own API quota, so never fall back to the snapshot here.
-          USE_MOCK: "0"
         run: node scripts/generate-cards.mjs
 
       - name: Commit & push if changed
