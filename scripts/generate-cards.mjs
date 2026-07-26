@@ -331,7 +331,7 @@ function animatedContributionPanel(data, leftW) {
   const MORPH = 2.4;
   const SETTLE = 4.2;
   const BACK = 1.6;
-  const INTRO_DELAY = 12.2;
+  const INTRO_DELAY = 11.2;
   const TOTAL = HOLD + MORPH + SETTLE + BACK;
   const tHold = +(HOLD / TOTAL).toFixed(4);
   const tMorphEnd = +((HOLD + MORPH) / TOTAL).toFixed(4);
@@ -575,7 +575,8 @@ function heroSpiderMan(A) {
   const INK = "#101018";
   const armL = "M-24,-78 C-36,-66 -39,-52 -35,-42";
   const armR = "M24,-78 C36,-66 39,-52 35,-42";
-  // Raised web-arm: hugs the outside of the head, fist just above the shoulder line.
+  // Aim toward the camera (up-left), then switch to a vertical climb pose.
+  const armAim = "M-18,-78 C-30,-96 -34,-116 -28,-128";
   const armWeb = "M22,-78 C34,-100 38,-132 34,-156";
 
   return `
@@ -594,15 +595,16 @@ function heroSpiderMan(A) {
           <path d="M-28,-64 C-12,-59 12,-59 28,-64"/>
         </g>
 
-        <!-- Left arm never leaves his side -->
+        <!-- Left arm: rests at his side, then aims at the camera, then drops while climbing -->
         <g>
+          <animate attributeName="opacity" values="1;1;0;0;1;1" keyTimes="0;${K.camAim - 0.02};${K.camAim};${K.lookBEnd};${K.lookBEnd + 0.02};1" dur="${DUR}s" fill="freeze"/>
           ${limb(armL, RED, INK, 13)}
           ${fist(-35, -40, RED, INK)}
         </g>
 
-        <!-- Right arm resting: hidden while pulling the cord and while riding the web -->
+        <!-- Right arm resting: hidden while pulling the cord and during the camera/climb beat -->
         <g>
-          <animate attributeName="opacity" values="1;1;0;0;1;1;0;0" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};${K.lookBEnd - 0.02};${K.lookBEnd};1" dur="${DUR}s" fill="freeze"/>
+          <animate attributeName="opacity" values="1;1;0;0;1;1;0;0" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};${K.camAim - 0.02};${K.camAim};1" dur="${DUR}s" fill="freeze"/>
           ${limb(armR, RED, INK, 13)}
           ${fist(35, -40, RED, INK)}
         </g>
@@ -611,6 +613,13 @@ function heroSpiderMan(A) {
         <g opacity="0">
           ${armSwap(A, true)}
           ${pullArm(A, { arm: RED, hand: RED, edge: INK })}
+        </g>
+
+        <!-- Left arm aiming a web at the camera -->
+        <g opacity="0">
+          <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${K.camAim - 0.02};${K.camAim};${K.lookBEnd};${K.lookBEnd + 0.02};1" dur="${DUR}s" fill="freeze"/>
+          ${limb(armAim, RED, INK, 13)}
+          ${fist(-28, -128, RED, INK)}
         </g>
 
         <g>
@@ -638,7 +647,7 @@ function heroSpiderMan(A) {
           </g>
         </g>
 
-        <!-- Right arm thrown up for the web ride (drawn over the head, hugging its edge) -->
+        <!-- Right arm thrown up for the climb (drawn over the head) -->
         <g opacity="0">
           <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.lookBEnd - 0.02};${K.lookBEnd};1" dur="${DUR}s" fill="freeze"/>
           ${limb(armWeb, RED, INK, 13)}
@@ -761,22 +770,25 @@ function openingShutter(width, height, themeName) {
     slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${theme.slat}" stroke-width="1" opacity="0.42"/>`;
   }
 
-  // Single 12s storyboard: the web-up exit needs a long, readable climb.
-  const DUR = 12;
+  // Walk in → pull → reveal. Looking / camera-web only happen AFTER the blind is up.
+  const DUR = 11;
   const at = (s) => +(s / DUR).toFixed(4);
   const K = {
     walkedIn: at(1.0),
-    planted: at(1.3),
-    lookAEnd: at(2.9),
-    grabbed: at(3.25),
-    yankEnd: at(3.75),
-    released: at(4.0),
-    letGo: at(4.2),
-    blindUp: at(5.5),
-    lookBEnd: at(6.5),
-    // webUp exit: shoot, then a slow ~4.5s ride to the top.
-    webStart: at(7.0),
-    gone: at(11.6),
+    planted: at(1.25),
+    grabbed: at(1.7),
+    yankEnd: at(2.2),
+    released: at(2.45),
+    letGo: at(2.65),
+    blindUp: at(3.9),
+    // Post-reveal beat: cat looks around; Spidey shoots a web at the camera.
+    camAim: at(4.15),
+    camHit: at(4.45),
+    lookBEnd: at(5.2),
+    // Spidey climb after the camera splat sticks.
+    webStart: at(5.5),
+    gone: at(10.4),
+    splatGone: at(10.85),
   };
   // Roller blinds travel fast then settle; keep it readable rather than snappy.
   const BLIND_EASE = "0 0 1 1;0.45 0 0.12 1;0 0 1 1";
@@ -788,15 +800,18 @@ function openingShutter(width, height, themeName) {
   const cordRestY = heroY - 116;
   const cordPullY = heroY + 14 - 82;
 
-  // Two "check both sides" beats: one before the pull, one before slipping away.
-  const lookTimes = [
-    0, K.planted,
-    at(1.75), at(2.05), at(2.45), at(2.75), K.lookAEnd,
-    K.blindUp,
-    at(5.8), at(6.0), at(6.25), at(6.4), K.lookBEnd,
-    1,
-  ].join(";");
-  const lookAngles = [0, 0, -9, -9, 10, 10, 0, 0, -9, -9, 10, 10, 0, 0];
+  // Cat only: check both sides AFTER the curtain rises. Spidey stays facing forward.
+  const isCat = theme.exit === "slideDown";
+  const lookTimes = isCat
+    ? [
+        0, K.blindUp,
+        at(4.2), at(4.4), at(4.7), at(4.95), K.lookBEnd,
+        1,
+      ].join(";")
+    : "0;1";
+  const lookAngles = isCat
+    ? [0, 0, -9, -9, 10, 10, 0, 0]
+    : [0, 0];
   const headTurn = lookAngles.map((a) => `${a} 0 -88`).join(";");
   const eyeShift = lookAngles.map((a) => `${a * 0.45} 0`).join(";");
   const A = { DUR, K, lookTimes, headTurn, eyeShift };
@@ -804,14 +819,14 @@ function openingShutter(width, height, themeName) {
   const heroTranslate =
     theme.exit === "webUp"
       ? {
-          values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 0;0 -700;0 -700",
-          keyTimes: `0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};${K.webStart};${K.gone};1`,
-          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0 0 1 1;0.25 0 0.5 1;0 0 1 1",
+          values: "150 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 0;0 -700;0 -700",
+          keyTimes: `0;${K.walkedIn};${K.planted};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};${K.webStart};${K.gone};1`,
+          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0 0 1 1;0.25 0 0.5 1;0 0 1 1",
         }
       : {
-          values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240",
-          keyTimes: `0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1`,
-          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.42 0 0.7 0.55",
+          values: "150 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240",
+          keyTimes: `0;${K.walkedIn};${K.planted};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1`,
+          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.42 0 0.7 0.55",
         };
 
   return `
@@ -893,9 +908,7 @@ function openingShutter(width, height, themeName) {
       })
       .join("\n    ")}
 
-    ${theme.exit === "webUp" ? webExitLine(A, heroX, heroY) : ""}
-
-    <!-- Hero: walks in, checks both sides, pulls the cord, then leaves the scene -->
+    <!-- Hero: walks in, pulls the cord, then leaves the scene -->
     <g transform="translate(${heroX},${heroY})">
       <g filter="url(#hero-glow)">
         <animateTransform attributeName="transform" type="translate"
@@ -905,7 +918,7 @@ function openingShutter(width, height, themeName) {
           keySplines="${heroTranslate.splines}"/>
         ${
           theme.exit === "webUp"
-            ? `<animateTransform attributeName="transform" type="rotate" additive="sum" values="0 34 -162;0 34 -162;-7 34 -162;-7 34 -162" keyTimes="0;${K.lookBEnd};${K.webStart};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.3 0 0.6 1;0 0 1 1"/>`
+            ? `<animateTransform attributeName="transform" type="rotate" additive="sum" values="0 34 -158;0 34 -158;-7 34 -158;-7 34 -158" keyTimes="0;${K.lookBEnd};${K.webStart};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.3 0 0.6 1;0 0 1 1"/>`
             : ""
         }
 
@@ -915,31 +928,70 @@ function openingShutter(width, height, themeName) {
         ${theme.hero(A)}
       </g>
     </g>
+
+    <!-- Camera web splat sits on top of everything (POV lens) -->
+    ${theme.exit === "webUp" ? webExitLine(A, heroX, heroY, width, height) : ""}
   </g>`;
 }
 
 /**
- * A taut thread from a fixed anchor just under the roller bar down to the
- * hero's hand. Drawn outside the hero's own transform, so as he rises the
- * card's own clip-path naturally eats the slack — the thread simply gets
- * shorter until it disappears into the anchor point.
+ * Spidey shoots a web AT the camera (POV splat sticks to the lens), then
+ * rides a second strand straight up and off-screen. The camera splat fades
+ * while he climbs.
  */
-function webExitLine(A, heroX, heroY) {
+function webExitLine(A, heroX, heroY, width, height) {
   const { DUR, K } = A;
-  // The raised fist sits at local (34,-162); the thread must stay glued to it.
-  const anchorX = heroX + 34;
-  const anchorY = 8;
-  const handY = heroY - 162;
-  const shot = +(K.lookBEnd + 0.02).toFixed(4);
+  const camX = +(width * 0.48).toFixed(1);
+  const camY = +(height * 0.38).toFixed(1);
+  // Fist while aiming toward the camera (local ≈ (-28, -128)).
+  const aimX = heroX - 28;
+  const aimY = heroY - 128;
+  // Fist while riding upward (local ≈ (34, -158)).
+  const climbX = heroX + 34;
+  const climbY = heroY - 158;
+  const topY = 8;
+  const shot = +(K.camAim + 0.02).toFixed(4);
+  const hit = K.camHit;
+  const fadeStart = +(K.webStart + 0.05).toFixed(4);
+
+  const splat = spiderWeb(0, 0, 118, {
+    spokes: 12,
+    rings: 5,
+    color: "#f4f7ff",
+    width: 2.2,
+    opacity: 0.95,
+  });
+
   return `
+    <!-- Strand that flies from his fist into the camera lens -->
     <g>
-      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.lookBEnd};${shot};1" dur="${DUR}s" fill="freeze"/>
-      <line x1="${anchorX}" y1="${handY}" x2="${anchorX}" y2="${handY}" stroke="#f4f7ff" stroke-width="2" opacity="0.95">
-        <animate attributeName="y1" values="${handY};${handY};${anchorY};${anchorY}" keyTimes="0;${K.lookBEnd};${shot};1" dur="${DUR}s" fill="freeze"/>
-        <animate attributeName="y2" values="${handY};${handY};${handY};${handY - 700};${handY - 700}" keyTimes="0;${K.lookBEnd};${K.webStart};${K.gone};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0 0 1 1;0.25 0 0.5 1;0 0 1 1"/>
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${K.camAim};${shot};${hit};${+(hit + 0.04).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
+      <line x1="${aimX}" y1="${aimY}" x2="${aimX}" y2="${aimY}" stroke="#f4f7ff" stroke-width="2.2" stroke-linecap="round">
+        <animate attributeName="x2" values="${aimX};${aimX};${camX};${camX}" keyTimes="0;${K.camAim};${hit};1" dur="${DUR}s" fill="freeze"/>
+        <animate attributeName="y2" values="${aimY};${aimY};${camY};${camY}" keyTimes="0;${K.camAim};${hit};1" dur="${DUR}s" fill="freeze"/>
       </line>
-      <g transform="translate(${anchorX},${anchorY})" opacity="0">
-        <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${K.lookBEnd};${shot};${K.lookBEnd + 0.1};1" dur="${DUR}s" fill="freeze"/>
+    </g>
+
+    <!-- Web splat stuck on the camera — grows on impact, then slowly fades -->
+    <g transform="translate(${camX},${camY})" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${hit};${+(hit + 0.04).toFixed(4)};${fadeStart};${K.splatGone};1" dur="${DUR}s" fill="freeze"/>
+      <g>
+        <animateTransform attributeName="transform" type="scale" values="0.05;0.05;1.15;1;1" keyTimes="0;${hit};${+(hit + 0.06).toFixed(4)};${+(hit + 0.14).toFixed(4)};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.15 0.7 0.25 1;0.4 0 0.6 1;0 0 1 1"/>
+        ${splat}
+        <circle cx="0" cy="0" r="7" fill="#f4f7ff" opacity="0.85"/>
+        <circle cx="0" cy="0" r="3.2" fill="#ffffff"/>
+      </g>
+    </g>
+
+    <!-- Climbing strand: hand → ceiling, stays attached as he rides up -->
+    <g>
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.lookBEnd};${K.webStart};1" dur="${DUR}s" fill="freeze"/>
+      <line x1="${climbX}" y1="${climbY}" x2="${climbX}" y2="${climbY}" stroke="#f4f7ff" stroke-width="2" opacity="0.95">
+        <animate attributeName="y1" values="${climbY};${climbY};${topY};${topY}" keyTimes="0;${K.lookBEnd};${K.webStart};1" dur="${DUR}s" fill="freeze"/>
+        <animate attributeName="y2" values="${climbY};${climbY};${climbY};${climbY - 700};${climbY - 700}" keyTimes="0;${K.lookBEnd};${K.webStart};${K.gone};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0 0 1 1;0.25 0 0.5 1;0 0 1 1"/>
+      </line>
+      <g transform="translate(${climbX},${topY})" opacity="0">
+        <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${K.lookBEnd};${K.webStart};${+(K.webStart + 0.12).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
         <path d="M-9,0 L9,0 M0,-9 L0,9 M-6,-6 L6,6 M-6,6 L6,-6" stroke="#f4f7ff" stroke-width="1.6" stroke-linecap="round"/>
       </g>
     </g>`;
