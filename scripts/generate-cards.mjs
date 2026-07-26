@@ -655,6 +655,69 @@ function heroSpiderMan(A) {
         </g>`;
 }
 
+/** Classic bat emblem used on the chest and in the Bat-Signal. */
+const BAT_EMBLEM =
+  "M0,-16 L-7,-10 L-16,-14 L-22,-4 L-14,-2 L-18,10 L-9,3 L-4,12 L0,5 L4,12 L9,3 L18,10 L14,-2 L22,-4 L16,-14 L7,-10 Z";
+
+/** Chibi Batman: black cowl, white lenses, yellow chest oval, flowing cape. */
+function heroBatman(A) {
+  const { DUR, K, lookTimes, headTurn, eyeShift } = A;
+  const BLACK = "#12141c";
+  const GRAY = "#2a2e3a";
+  const YELLOW = "#f5d76e";
+  const INK = "#07080c";
+  const armL = "M-22,-78 C-34,-66 -36,-52 -32,-42";
+  const armR = "M22,-78 C34,-66 36,-52 32,-42";
+
+  return `
+        <g>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${K.board};${+(K.board + 0.03).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
+        <!-- Cape behind everything -->
+        <path d="M-26,-90 C-70,-80 -78,-30 -58,8 C-34,-8 -12,-2 0,-4 C12,-2 34,-8 58,8 C78,-30 70,-80 26,-90 C12,-100 0,-102 -26,-90 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.6" opacity="0.95"/>
+
+        <rect x="-28" y="-18" width="24" height="18" rx="5" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="4" y="-18" width="24" height="18" rx="5" fill="${BLACK}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="-22" y="-52" width="16" height="36" rx="6" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="6" y="-52" width="16" height="36" rx="6" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+        <rect x="-16" y="-58" width="32" height="14" rx="6" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+
+        <path d="M-28,-50 C-33,-76 -24,-94 0,-94 C24,-94 33,-76 28,-50 C19,-41 -19,-41 -28,-50 Z" fill="${GRAY}" stroke="${INK}" stroke-width="1.8"/>
+        <ellipse cx="0" cy="-72" rx="17" ry="13" fill="${YELLOW}" stroke="${INK}" stroke-width="1.6"/>
+        <path d="${BAT_EMBLEM}" fill="${INK}" transform="translate(0,-72) scale(0.62)"/>
+
+        <g>
+          ${armSwap(A, false)}
+          ${limb(armL, BLACK, INK, 12)}
+          ${limb(armR, BLACK, INK, 12)}
+          ${fist(-32, -40, BLACK, INK)}
+          ${fist(32, -40, BLACK, INK)}
+        </g>
+
+        <g opacity="0">
+          ${armSwap(A, true)}
+          ${limb(armL, BLACK, INK, 12)}
+          ${fist(-32, -40, BLACK, INK)}
+          ${pullArm(A, { arm: BLACK, hand: BLACK, edge: INK })}
+        </g>
+
+        <g>
+          <animateTransform attributeName="transform" type="rotate" values="${headTurn}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+
+          <!-- Tall pointed cowl ears -->
+          <path d="M-16,-150 L-22,-188 L-4,-154 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.4"/>
+          <path d="M16,-150 L22,-188 L4,-154 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.4"/>
+          <!-- Angular cowl -->
+          <path d="M0,-158 C22,-158 34,-140 32,-114 C30,-94 22,-80 12,-72 Q0,-64 -12,-72 C-22,-80 -30,-94 -32,-114 C-34,-140 -22,-158 0,-158 Z" fill="${BLACK}" stroke="${INK}" stroke-width="2"/>
+          <!-- White angular lenses -->
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
+            <path d="M-5,-126 C-8,-138 -18,-144 -28,-138 C-32,-130 -28,-120 -18,-116 C-10,-114 -5,-118 -5,-126 Z" fill="#f4f7ff"/>
+            <path d="M5,-126 C8,-138 18,-144 28,-138 C32,-130 28,-120 18,-116 C10,-114 5,-118 5,-126 Z" fill="#f4f7ff"/>
+          </g>
+        </g>
+        </g>`;
+}
+
 const CURTAIN_THEMES = {
   cat: {
     fabric: ["#f8dc62", "#e8bd35", "#d7a824", "#f2ca45"],
@@ -742,6 +805,59 @@ const CURTAIN_THEMES = {
       <line x1="146" y1="128" x2="146" y2="206" stroke="#5e0a12" stroke-width="1.4" opacity="0.6"/>
       <use href="#spider-mark" transform="translate(146 218) scale(1.15)"/>`,
   },
+
+  batman: {
+    fabric: ["#0b1228", "#101a36", "#070d1c", "#162044"],
+    slat: "#1a2748",
+    plate: { fill: "#f5d76e", stroke: "#12141c", text: "#12141c", sub: "#5a4a18" },
+    bar: "#0a0c14",
+    barStroke: "#2a3148",
+    cord: "#3a4258",
+    handle: "#0a0c14",
+    handleDot: "#f5d76e",
+    glow: "#f5d76e",
+    sparkle: "#ffe9a0",
+    exit: "batmobile",
+    hero: heroBatman,
+    defs: `
+    <radialGradient id="bat-signal-glow" cx="0.5" cy="0.45" r="0.55">
+      <stop offset="0" stop-color="#fff6c8" stop-opacity="0.95"/>
+      <stop offset="0.35" stop-color="#f5d76e" stop-opacity="0.75"/>
+      <stop offset="0.7" stop-color="#c9a227" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#c9a227" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bat-beam" x1="0.5" y1="1" x2="0.5" y2="0">
+      <stop offset="0" stop-color="#f5d76e" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#f5d76e" stop-opacity="0"/>
+    </linearGradient>
+    <g id="bat-emblem">
+      <path d="${BAT_EMBLEM}" fill="#0a0c14"/>
+    </g>
+    <!-- Sparse stars only — the big Bat-Signal is painted in curtainExtra. -->
+    <pattern id="curtain-print" width="200" height="160" patternUnits="userSpaceOnUse">
+      <circle cx="24" cy="30" r="1.1" fill="#dce6ff" opacity="0.55"/>
+      <circle cx="110" cy="18" r="0.8" fill="#dce6ff" opacity="0.4"/>
+      <circle cx="168" cy="70" r="1.2" fill="#dce6ff" opacity="0.5"/>
+      <circle cx="70" cy="100" r="0.7" fill="#dce6ff" opacity="0.35"/>
+      <circle cx="150" cy="130" r="1" fill="#dce6ff" opacity="0.45"/>
+      <circle cx="40" cy="140" r="0.6" fill="#dce6ff" opacity="0.3"/>
+    </pattern>`,
+    curtainExtra: (w, h) => {
+      const cx = w * 0.5;
+      const cy = h * 0.36;
+      return `
+      <!-- Searchlight cone from the ground up into the night sky -->
+      <path d="M${cx - 28},${h - 8} L${cx - 175},${cy + 90} L${cx + 175},${cy + 90} L${cx + 28},${h - 8} Z" fill="url(#bat-beam)" opacity="0.9"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="168" ry="122" fill="url(#bat-signal-glow)"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="128" ry="94" fill="#ffe9a0" opacity="0.72"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="110" ry="80" fill="#fff6c8" opacity="0.35"/>
+      <use href="#bat-emblem" transform="translate(${cx} ${cy + 4}) scale(6.4)"/>
+      <!-- Soft cloud wisps around the signal -->
+      <ellipse cx="${cx - 150}" cy="${cy - 50}" rx="58" ry="20" fill="#1a2748" opacity="0.4"/>
+      <ellipse cx="${cx + 155}" cy="${cy + 36}" rx="64" ry="22" fill="#1a2748" opacity="0.35"/>
+      <ellipse cx="${cx + 40}" cy="${cy - 70}" rx="40" ry="14" fill="#1a2748" opacity="0.25"/>`;
+    },
+  },
 };
 
 /**
@@ -770,7 +886,7 @@ function openingShutter(width, height, themeName) {
     slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${theme.slat}" stroke-width="1" opacity="0.42"/>`;
   }
 
-  // Walk in → pull → reveal. Looking / camera-web only happen AFTER the blind is up.
+  // Walk in → pull → reveal. Looking / camera-web / Batmobile only AFTER the blind is up.
   const DUR = 11;
   const at = (s) => +(s / DUR).toFixed(4);
   const K = {
@@ -781,7 +897,7 @@ function openingShutter(width, height, themeName) {
     released: at(2.45),
     letGo: at(2.65),
     blindUp: at(3.9),
-    // Post-reveal beat: cat looks around; Spidey shoots a web at the camera.
+    // Post-reveal beat: cat looks around; Spidey shoots a web; Batmobile arrives.
     camAim: at(4.15),
     camHit: at(4.45),
     lookBEnd: at(5.2),
@@ -791,6 +907,11 @@ function openingShutter(width, height, themeName) {
     // Camera splat fades early so the dashboard reads cleanly during the climb.
     splatFade: at(5.0),
     splatGone: at(7.0),
+    // Batmobile pickup.
+    carIn: at(4.3),
+    carStop: at(5.35),
+    board: at(5.65),
+    drive: at(5.95),
   };
   // Roller blinds travel fast then settle; keep it readable rather than snappy.
   const BLIND_EASE = "0 0 1 1;0.45 0 0.12 1;0 0 1 1";
@@ -802,7 +923,7 @@ function openingShutter(width, height, themeName) {
   const cordRestY = heroY - 116;
   const cordPullY = heroY + 14 - 82;
 
-  // Cat only: check both sides AFTER the curtain rises. Spidey stays facing forward.
+  // Cat only: check both sides AFTER the curtain rises. Others stay facing forward.
   const isCat = theme.exit === "slideDown";
   const lookTimes = isCat
     ? [
@@ -825,11 +946,18 @@ function openingShutter(width, height, themeName) {
           keyTimes: `0;${K.walkedIn};${K.planted};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};${K.webStart};${K.gone};1`,
           splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0 0 1 1;0.25 0 0.5 1;0 0 1 1",
         }
-      : {
-          values: "150 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240",
-          keyTimes: `0;${K.walkedIn};${K.planted};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1`,
-          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.42 0 0.7 0.55",
-        };
+      : theme.exit === "batmobile"
+        ? {
+            // Hop left into the cockpit, then vanish with the car.
+            values: "150 0;0 0;0 0;0 0;0 14;0 0;0 0;-55 -6;-55 -6;-55 -6",
+            keyTimes: `0;${K.walkedIn};${K.planted};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.carStop};${K.board};1`,
+            splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0.35 0 0.55 1;0 0 1 1;0 0 1 1",
+          }
+        : {
+            values: "150 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240",
+            keyTimes: `0;${K.walkedIn};${K.planted};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1`,
+            splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.42 0 0.7 0.55",
+          };
 
   return `
   <defs>${theme.defs}
@@ -925,7 +1053,7 @@ function openingShutter(width, height, themeName) {
         }
 
         <ellipse cx="0" cy="-2" rx="48" ry="10" fill="url(#hero-shadow)">
-          <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${K.lookBEnd};${K.lookBEnd + 0.05};1" dur="${DUR}s" fill="freeze"/>
+          <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${theme.exit === "batmobile" ? K.board : K.lookBEnd};${+((theme.exit === "batmobile" ? K.board : K.lookBEnd) + 0.05).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
         </ellipse>
         ${theme.hero(A)}
       </g>
@@ -933,6 +1061,7 @@ function openingShutter(width, height, themeName) {
 
     <!-- Camera web splat sits on top of everything (POV lens) -->
     ${theme.exit === "webUp" ? webExitLine(A, heroX, heroY, width, height) : ""}
+    ${theme.exit === "batmobile" ? batmobileExit(A, heroX, heroY, width, height) : ""}
   </g>`;
 }
 
@@ -997,6 +1126,100 @@ function webExitLine(A, heroX, heroY, width, height) {
       <g transform="translate(${climbX},${topY})" opacity="0">
         <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${K.lookBEnd};${K.webStart};${+(K.webStart + 0.12).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
         <path d="M-9,0 L9,0 M0,-9 L0,9 M-6,-6 L6,6 M-6,6 L6,-6" stroke="#f4f7ff" stroke-width="1.6" stroke-linecap="round"/>
+      </g>
+    </g>`;
+}
+
+/**
+ * The Batmobile rolls in from the left, Batman hops aboard, then it peels out
+ * to the right trailing exhaust smoke.
+ */
+function batmobileExit(A, heroX, heroY, width, height) {
+  const { DUR, K } = A;
+  const stopX = heroX - 70;
+  const y = heroY - 4;
+  const offL = -220;
+  const offR = width + 260;
+  const BLACK = "#0d1018";
+  const BODY = "#161a24";
+  const YELLOW = "#f5d76e";
+  const INK = "#05060a";
+
+  const smokePuff = (dx, dy, delay, scale = 1) => {
+    const t0 = +(K.drive + delay).toFixed(4);
+    const t1 = +(t0 + 0.06).toFixed(4);
+    const t2 = +(t0 + 0.55).toFixed(4);
+    return `<g transform="translate(${dx},${dy})" opacity="0">
+      <animate attributeName="opacity" values="0;0;0.85;0;0" keyTimes="0;${t0};${t1};${t2};1" dur="${DUR}s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" additive="sum" values="0 0;0 0;-28 -14;-70 -36;-70 -36" keyTimes="0;${t0};${t1};${t2};1" dur="${DUR}s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="scale" additive="sum" values="${scale};${scale};${scale * 1.8};${scale * 3.2};${scale * 3.2}" keyTimes="0;${t0};${t1};${t2};1" dur="${DUR}s" fill="freeze"/>
+      <ellipse cx="0" cy="0" rx="12" ry="8" fill="#9aa1ad"/>
+      <ellipse cx="-5" cy="-4" rx="6" ry="4" fill="#d0d4dc" opacity="0.5"/>
+    </g>`;
+  };
+
+  return `
+    <g>
+      <animateTransform attributeName="transform" type="translate"
+        values="${offL} ${y};${offL} ${y};${stopX} ${y};${stopX} ${y};${offR} ${y};${offR} ${y}"
+        keyTimes="0;${K.carIn};${K.carStop};${K.drive};${K.gone};1"
+        dur="${DUR}s" fill="freeze" calcMode="spline"
+        keySplines="0 0 1 1;0.2 0.7 0.2 1;0 0 1 1;0.35 0 0.55 1;0 0 1 1"/>
+
+      <!-- Exhaust smoke trail once he floors it -->
+      <g transform="translate(-78, -18)">
+        ${smokePuff(0, 0, 0, 1.0)}
+        ${smokePuff(-6, 5, 0.1, 1.2)}
+        ${smokePuff(5, -3, 0.2, 0.95)}
+        ${smokePuff(-12, 3, 0.32, 1.35)}
+        ${smokePuff(-2, 7, 0.45, 1.1)}
+        ${smokePuff(-16, 1, 0.58, 1.45)}
+        ${smokePuff(-4, 6, 0.72, 1.2)}
+        ${smokePuff(-20, 4, 0.88, 1.55)}
+        ${smokePuff(-8, 2, 1.05, 1.3)}
+        ${smokePuff(-24, 5, 1.25, 1.6)}
+        ${smokePuff(-10, 0, 1.5, 1.4)}
+        ${smokePuff(-18, 6, 1.8, 1.5)}
+      </g>
+
+      <!-- Idle idle puffs while parked -->
+      <g transform="translate(-78, -18)" opacity="0">
+        <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${K.carStop};${+(K.carStop + 0.02).toFixed(4)};${K.drive};${+(K.drive + 0.02).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
+        <ellipse cx="0" cy="0" rx="8" ry="5" fill="#8a909c" opacity="0.4">
+          <animate attributeName="rx" values="6;10;6" dur="0.9s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.45;0.2;0.45" dur="0.9s" repeatCount="indefinite"/>
+        </ellipse>
+      </g>
+
+      <!-- Wheels -->
+      <ellipse cx="-48" cy="-6" rx="16" ry="14" fill="${INK}"/>
+      <ellipse cx="-48" cy="-6" rx="9" ry="8" fill="#2a303c"/>
+      <ellipse cx="42" cy="-6" rx="16" ry="14" fill="${INK}"/>
+      <ellipse cx="42" cy="-6" rx="9" ry="8" fill="#2a303c"/>
+
+      <!-- Low long body + rear fin -->
+      <path d="M-78,-18 C-70,-42 -40,-52 -10,-50 L30,-48 C55,-46 72,-36 78,-22 L82,-10 L82,-4 L-82,-4 L-82,-12 Z" fill="${BODY}" stroke="${INK}" stroke-width="2"/>
+      <path d="M-20,-50 L-8,-78 L8,-50 Z" fill="${BLACK}" stroke="${INK}" stroke-width="1.6"/>
+      <path d="M-74,-20 L-50,-20 L-46,-12 L-78,-12 Z" fill="${BLACK}"/>
+      <!-- Cockpit canopy -->
+      <path d="M-18,-48 C-6,-62 18,-62 32,-48 C20,-44 -6,-44 -18,-48 Z" fill="#1c2438" stroke="${INK}" stroke-width="1.4" opacity="0.9"/>
+      <!-- Headlights -->
+      <ellipse cx="72" cy="-18" rx="5" ry="3.5" fill="${YELLOW}">
+        <animate attributeName="opacity" values="0.55;1;0.55" dur="0.55s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="68" cy="-26" rx="3.5" ry="2.5" fill="${YELLOW}" opacity="0.8"/>
+      <!-- Yellow trim stripe -->
+      <path d="M-60,-22 L70,-22" fill="none" stroke="${YELLOW}" stroke-width="1.5" opacity="0.7"/>
+      <use href="#bat-emblem" transform="translate(8 -30) scale(0.7)" opacity="0.85"/>
+
+      <!-- Batman silhouette in the cockpit after boarding -->
+      <g opacity="0" transform="translate(2, -58)">
+        <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.board};${+(K.board + 0.04).toFixed(4)};1" dur="${DUR}s" fill="freeze"/>
+        <path d="M-8,-18 L-12,-34 L-2,-20 Z" fill="${BLACK}"/>
+        <path d="M8,-18 L12,-34 L2,-20 Z" fill="${BLACK}"/>
+        <ellipse cx="0" cy="-14" rx="11" ry="13" fill="${BLACK}"/>
+        <ellipse cx="-4" cy="-15" rx="3.2" ry="2.2" fill="#f4f7ff"/>
+        <ellipse cx="4" cy="-15" rx="3.2" ry="2.2" fill="#f4f7ff"/>
       </g>
     </g>`;
 }

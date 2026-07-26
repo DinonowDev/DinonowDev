@@ -10,7 +10,7 @@ on:
         required: false
         default: ""
         type: choice
-        options: ["", "random", "cat", "spiderman"]
+        options: ["", "random", "cat", "spiderman", "batman"]
   push:
     branches: [main]
     paths:
@@ -33,8 +33,8 @@ jobs:
           node-version: "22"
 
       # CARD_THEME: set the repository variable (Settings -> Secrets and
-      # variables -> Actions -> Variables) to "cat" or "spiderman" to pin a
-      # character. Leave it unset for a random pick on every run.
+      # variables -> Actions -> Variables) to "cat", "spiderman", or "batman"
+      # to pin a character. Leave it unset for a random pick on every run.
       - name: Generate SVG card
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
