@@ -331,7 +331,7 @@ function animatedContributionPanel(data, leftW) {
   const MORPH = 2.4;
   const SETTLE = 4.2;
   const BACK = 1.6;
-  const INTRO_DELAY = 7.8;
+  const INTRO_DELAY = 9.0;
   const TOTAL = HOLD + MORPH + SETTLE + BACK;
   const tHold = +(HOLD / TOTAL).toFixed(4);
   const tMorphEnd = +((HOLD + MORPH) / TOTAL).toFixed(4);
@@ -519,9 +519,9 @@ function heroCat(A) {
 const SPIDEY_MASK =
   "M0,-160 C24,-160 36,-142 34,-118 C33,-100 28,-84 16,-74 Q0,-64 -16,-74 C-28,-84 -33,-100 -34,-118 C-36,-142 -24,-160 0,-160 Z";
 const SPIDEY_LENS_R =
-  "M6,-119 C4,-129 6,-138 13,-144 C20,-150 29,-150 35,-144 C31,-137 25,-130 19,-125 C14,-121 9,-119 6,-119 Z";
+  "M5,-109 C1,-120 2,-133 9,-142 C16,-149 26,-149 30,-142 C29,-133 24,-123 17,-115 C12,-109 8,-106 5,-109 Z";
 const SPIDEY_LENS_L =
-  "M-6,-119 C-4,-129 -6,-138 -13,-144 C-20,-150 -29,-150 -35,-144 C-31,-137 -25,-130 -19,-125 C-14,-121 -9,-119 -6,-119 Z";
+  "M-5,-109 C-1,-120 -2,-133 -9,-142 C-16,-149 -26,-149 -30,-142 C-29,-133 -24,-123 -17,-115 C-12,-109 -8,-106 -5,-109 Z";
 
 /** One thick-stroked capsule limb, drawn twice (dark outline, then color) for a clean edge. */
 function limb(d, color, ink, w) {
@@ -529,21 +529,49 @@ function limb(d, color, ink, w) {
           <path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>`;
 }
 
-/** Open hook/claw hand, LEGO-minifig style: a stubby "C" instead of a mitten. */
-function claw(cx, cy, color, ink) {
-  return `<g transform="translate(${cx},${cy})">
-          <path d="M-8,-7 A10,10 0 1,0 8,-7" fill="none" stroke="${ink}" stroke-width="8.5" stroke-linecap="round"/>
-          <path d="M-8,-7 A10,10 0 1,0 8,-7" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"/>
-        </g>`;
+/** Simple round mitten fist — reads far cleaner at this size than fingers. */
+function fist(cx, cy, color, ink) {
+  return `<circle cx="${cx}" cy="${cy}" r="8.5" fill="${color}" stroke="${ink}" stroke-width="2"/>`;
+}
+
+/**
+ * A classic spider web: straight spokes from a centre plus concentric rings
+ * of arcs that sag toward the centre — same construction as the tie print.
+ */
+function spiderWeb(cx, cy, r, { a0 = 0, a1 = 360, spokes = 8, rings = 4, color = "#5e0a12", width = 1.5, opacity = 0.55 } = {}) {
+  const pt = (deg, rr) => {
+    const a = (deg * Math.PI) / 180;
+    return [+(cx + Math.cos(a) * rr).toFixed(1), +(cy + Math.sin(a) * rr).toFixed(1)];
+  };
+  const step = (a1 - a0) / spokes;
+  const angles = Array.from({ length: spokes + 1 }, (_, i) => a0 + i * step);
+  let d = "";
+  for (const a of angles) {
+    const [x, y] = pt(a, r);
+    d += `M${cx},${cy} L${x},${y} `;
+  }
+  for (let k = 1; k <= rings; k++) {
+    const rr = r * (0.28 + (0.72 * k) / rings);
+    for (let i = 0; i < spokes; i++) {
+      const [xa, ya] = pt(angles[i], rr);
+      const [xm, ym] = pt(angles[i] + step / 2, rr * 0.87);
+      const [xb, yb] = pt(angles[i + 1], rr);
+      d += `M${xa},${ya} Q${xm},${ym} ${xb},${yb} `;
+    }
+  }
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" opacity="${opacity}" stroke-linecap="round"/>`;
 }
 
 /** Chibi cartoon Spider-Man with blocky, LEGO-inspired limbs; boots planted on the floor. */
 function heroSpiderMan(A) {
-  const { DUR, lookTimes, headTurn, eyeShift } = A;
+  const { DUR, K, lookTimes, headTurn, eyeShift } = A;
   const RED = "#e0262d";
   const BLUE = "#1c2f8f";
   const INK = "#101018";
-  const armL = "M-22,-80 C-32,-68 -34,-54 -30,-44";
+  const armL = "M-24,-78 C-36,-66 -39,-52 -35,-42";
+  const armR = "M24,-78 C36,-66 39,-52 35,-42";
+  // Raised web-arm: hugs the outside of the head, fist just above the shoulder line.
+  const armWeb = "M22,-78 C34,-100 38,-132 34,-156";
 
   return `
         <rect x="-30" y="-20" width="25" height="20" rx="5" fill="${RED}" stroke="${INK}" stroke-width="1.8"/>
@@ -561,18 +589,22 @@ function heroSpiderMan(A) {
           <path d="M-28,-64 C-12,-59 12,-59 28,-64"/>
         </g>
 
+        <!-- Left arm never leaves his side -->
         <g>
-          ${armSwap(A, false)}
           ${limb(armL, RED, INK, 13)}
-          ${limb(armL, RED, INK, 13).replace(/<path /g, '<path transform="scale(-1,1)" ')}
-          ${claw(-30, -42, RED, INK)}
-          ${claw(30, -42, RED, INK)}
+          ${fist(-35, -40, RED, INK)}
         </g>
 
+        <!-- Right arm resting: hidden while pulling the cord and while riding the web -->
+        <g>
+          <animate attributeName="opacity" values="1;1;0;0;1;1;0;0" keyTimes="0;${K.grabbed - 0.02};${K.grabbed};${K.letGo};${K.letGo + 0.02};${K.lookBEnd - 0.02};${K.lookBEnd};1" dur="${DUR}s" fill="freeze"/>
+          ${limb(armR, RED, INK, 13)}
+          ${fist(35, -40, RED, INK)}
+        </g>
+
+        <!-- Right arm hauling the cord -->
         <g opacity="0">
           ${armSwap(A, true)}
-          ${limb(armL, RED, INK, 13)}
-          ${claw(-30, -42, RED, INK)}
           ${pullArm(A, { arm: RED, hand: RED, edge: INK })}
         </g>
 
@@ -581,34 +613,41 @@ function heroSpiderMan(A) {
 
           <path d="${SPIDEY_MASK}" fill="${RED}" stroke="${INK}" stroke-width="2.2"/>
 
-          <g fill="none" stroke="${INK}" stroke-width="1" opacity="0.65">
-            <path d="M0,-159 L0,-65"/>
-            <path d="M0,-146 C-10,-140 -20,-136 -32,-133"/>
-            <path d="M0,-146 C10,-140 20,-136 32,-133"/>
-            <path d="M0,-138 C-8,-130 -16,-124 -25,-119"/>
-            <path d="M0,-138 C8,-130 16,-124 25,-119"/>
-            <path d="M0,-128 C-6,-118 -12,-108 -18,-98"/>
-            <path d="M0,-128 C6,-118 12,-108 18,-98"/>
-            <path d="M-30,-142 Q0,-152 30,-142"/>
-            <path d="M-33,-124 Q0,-137 33,-124"/>
-            <path d="M-30,-104 Q0,-118 30,-104"/>
-            <path d="M-21,-86 Q0,-98 21,-86"/>
-            <path d="M-10,-72 Q0,-66 10,-72"/>
-            <path d="M0,-138 L0,-70"/>
+          <!-- Mask web: spokes radiating from the nose bridge, arcs bowing away from it -->
+          <g fill="none" stroke="${INK}" stroke-width="1.1" opacity="0.6">
+            <path d="M0,-131 L0,-159"/>
+            <path d="M0,-131 L-14,-157"/><path d="M0,-131 L14,-157"/>
+            <path d="M0,-131 L-27,-149"/><path d="M0,-131 L27,-149"/>
+            <path d="M0,-131 L-33,-128"/><path d="M0,-131 L33,-128"/>
+            <path d="M0,-131 L-28,-97"/><path d="M0,-131 L28,-97"/>
+            <path d="M0,-131 L-16,-76"/><path d="M0,-131 L16,-76"/>
+            <path d="M0,-131 L0,-65"/>
+            <path d="M-10,-121 Q0,-114 10,-121"/>
+            <path d="M-19,-110 Q0,-100 19,-110"/>
+            <path d="M-27,-97 Q0,-84 27,-97"/>
+            <path d="M-21,-79 Q0,-67 21,-79"/>
+            <path d="M-12,-143 Q0,-148 12,-143"/>
+            <path d="M-22,-151 Q0,-157 22,-151"/>
           </g>
 
+          <!-- Big friendly white lenses, comic-book style -->
           <g>
             <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
-            <path d="${SPIDEY_LENS_L}" fill="${INK}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
-            <path d="${SPIDEY_LENS_R}" fill="${INK}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+            <path d="${SPIDEY_LENS_L}" fill="#f6f8ff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+            <path d="${SPIDEY_LENS_R}" fill="#f6f8ff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
             <g clip-path="url(#spidey-lens-clip)">
-              <rect x="-40" y="-155" width="80" height="0" fill="#ffffff" opacity="0.85">
-                <animate attributeName="height" values="0;0;9;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
+              <rect x="-40" y="-155" width="80" height="0" fill="${RED}">
+                <animate attributeName="height" values="0;0;16;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
               </rect>
             </g>
-            <circle cx="24" cy="-141" r="1.6" fill="#f4f7ff" opacity="0.9"/>
-            <circle cx="-24" cy="-141" r="1.6" fill="#f4f7ff" opacity="0.9"/>
           </g>
+        </g>
+
+        <!-- Right arm thrown up for the web ride (drawn over the head, hugging its edge) -->
+        <g opacity="0">
+          <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.lookBEnd - 0.02};${K.lookBEnd};1" dur="${DUR}s" fill="freeze"/>
+          ${limb(armWeb, RED, INK, 13)}
+          ${fist(34, -158, RED, INK)}
         </g>`;
 }
 
@@ -684,36 +723,17 @@ const CURTAIN_THEMES = {
       <circle cx="2.4" cy="-8.4" r="0.6" fill="#171719"/>
     </g>
 
-    <!-- Curtain print, object 2: a small radial web. -->
-    <g id="web-mark" stroke="#171719" fill="none" stroke-width="1" stroke-linecap="round">
-      <path d="M0,0 L0,-22 M0,0 L19,-11 M0,0 L19,11 M0,0 L0,22 M0,0 L-19,11 M0,0 L-19,-11"/>
-      <path d="M0,-7.5 Q9.5,-9 11,-3.5 Q13,4 6,7.5 Q-3,11.5 -9.5,4.5 Q-15,-1.5 -9.5,-8 Q-5,-13 0,-7.5"/>
-      <path d="M0,-15 Q16,-17 19,-7 Q22,7 10,15 Q-5,23 -16,9 Q-25,-3 -16,-16 Q-9,-24 0,-15"/>
-    </g>
-
-    <!-- Curtain print, object 3: a tiny, cute Spidey face. -->
-    <g id="spidey-face-mark" transform="scale(0.22)">
-      <path d="${SPIDEY_MASK}" fill="#e0262d" stroke="#171719" stroke-width="4.5" transform="translate(0,138)"/>
-      <path d="${SPIDEY_LENS_L}" fill="#171719" transform="translate(0,138)"/>
-      <path d="${SPIDEY_LENS_R}" fill="#171719" transform="translate(0,138)"/>
-      <g fill="none" stroke="#171719" stroke-width="2" opacity="0.6" transform="translate(0,138)">
-        <path d="M0,-159 L0,-65"/>
-        <path d="M-30,-142 Q0,-152 30,-142"/>
-        <path d="M-30,-104 Q0,-118 30,-104"/>
-      </g>
-    </g>
-
     <pattern id="curtain-print" width="230" height="190" patternUnits="userSpaceOnUse" patternTransform="rotate(-3)">
-      <g fill="none" stroke="#7d0f19" opacity="0.5" stroke-width="1">
-        <path d="M0,0 L230,190 M230,0 L0,190"/>
-        <path d="M115,0 L230,95 L115,190 L0,95 Z"/>
-      </g>
-      <use href="#spider-mark" transform="translate(46 40) rotate(-10) scale(1.1)"/>
-      <use href="#web-mark" transform="translate(178 34) rotate(6) scale(0.85)" opacity="0.8"/>
-      <use href="#spidey-face-mark" transform="translate(120 122) rotate(-6)"/>
+      <use href="#spider-mark" transform="translate(46 44) rotate(-10) scale(1.05)"/>
       <use href="#spider-mark" transform="translate(196 150) rotate(14) scale(0.62)" opacity="0.85"/>
-      <use href="#web-mark" transform="translate(30 150) rotate(-14) scale(0.55)" opacity="0.7"/>
+      <use href="#spider-mark" transform="translate(132 108) rotate(24) scale(0.45)" opacity="0.7"/>
     </pattern>`,
+    // One big corner web + one full web, drawn on the fabric like the tie print.
+    curtainExtra: (w, h) => `
+      ${spiderWeb(0, 14, 250, { a0: 4, a1: 88, spokes: 6, rings: 5, color: "#5e0a12", width: 1.7, opacity: 0.6 })}
+      ${spiderWeb(w - 178, 128, 105, { spokes: 10, rings: 4, color: "#5e0a12", width: 1.4, opacity: 0.5 })}
+      <line x1="146" y1="128" x2="146" y2="206" stroke="#5e0a12" stroke-width="1.4" opacity="0.6"/>
+      <use href="#spider-mark" transform="translate(146 218) scale(1.15)"/>`,
   },
 };
 
@@ -743,8 +763,8 @@ function openingShutter(width, height, themeName) {
     slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${theme.slat}" stroke-width="1" opacity="0.42"/>`;
   }
 
-  // Single 7.6s storyboard shared by the blind, the cord and the cat.
-  const DUR = 7.6;
+  // Single 8.6s storyboard shared by the blind, the cord and the hero.
+  const DUR = 8.6;
   const at = (s) => +(s / DUR).toFixed(4);
   const K = {
     walkedIn: at(1.0),
@@ -756,6 +776,9 @@ function openingShutter(width, height, themeName) {
     letGo: at(4.2),
     blindUp: at(5.5),
     lookBEnd: at(6.5),
+    // webUp exit only: the web is shot, then a slow steady ride to the top.
+    webStart: at(6.8),
+    gone: at(8.45),
   };
   // Roller blinds travel fast then settle; keep it readable rather than snappy.
   const BLIND_EASE = "0 0 1 1;0.45 0 0.12 1;0 0 1 1";
@@ -783,9 +806,9 @@ function openingShutter(width, height, themeName) {
   const heroTranslate =
     theme.exit === "webUp"
       ? {
-          values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 -460",
-          keyTimes: `0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};1`,
-          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0.5 0 0.85 0.35",
+          values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 0;0 -700;0 -700",
+          keyTimes: `0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};${K.webStart};${K.gone};1`,
+          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0 0 1 1;0.4 0 0.6 1;0 0 1 1",
         }
       : {
           values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240",
@@ -825,6 +848,7 @@ function openingShutter(width, height, themeName) {
   <g clip-path="url(#card-clip)">
     <g clip-path="url(#shutter-clip)">
       <rect width="${width}" height="${height}" rx="18" fill="url(#curtain-fabric)"/>
+      ${theme.curtainExtra ? theme.curtainExtra(width, height) : ""}
       <rect width="${width}" height="${height}" rx="18" fill="url(#curtain-print)"/>
       ${slats}
       <rect x="${width / 2 - 138}" y="${height / 2 - 36}" width="276" height="72" rx="20" fill="${theme.plate.fill}" stroke="${theme.plate.stroke}" stroke-width="2"/>
@@ -883,7 +907,7 @@ function openingShutter(width, height, themeName) {
           keySplines="${heroTranslate.splines}"/>
         ${
           theme.exit === "webUp"
-            ? `<animateTransform attributeName="transform" type="rotate" additive="sum" values="0 0 0;0 0 0;-10 0 0;-10 0 0" keyTimes="0;${K.lookBEnd};${K.lookBEnd + 0.12};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.3 0 0.6 1;0 0 1 1"/>`
+            ? `<animateTransform attributeName="transform" type="rotate" additive="sum" values="0 34 -162;0 34 -162;-7 34 -162;-7 34 -162" keyTimes="0;${K.lookBEnd};${K.webStart};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.3 0 0.6 1;0 0 1 1"/>`
             : ""
         }
 
@@ -904,20 +928,20 @@ function openingShutter(width, height, themeName) {
  */
 function webExitLine(A, heroX, heroY) {
   const { DUR, K } = A;
-  const anchorX = heroX - 6;
-  const anchorY = 10;
-  const handY = heroY - 118;
-  const times = `0;${K.lookBEnd};${K.lookBEnd + 0.03};0.94;1`;
-  const y2 = `${handY};${handY};${handY};${anchorY - 260};${anchorY - 400}`;
-  const splines = "0 0 1 1;0 0 1 1;0.4 0 0.15 1;0 0 1 1";
+  // The raised fist sits at local (34,-162); the thread must stay glued to it.
+  const anchorX = heroX + 34;
+  const anchorY = 8;
+  const handY = heroY - 162;
+  const shot = +(K.lookBEnd + 0.02).toFixed(4);
   return `
     <g>
-      <animate attributeName="opacity" values="0;0;1;1;1" keyTimes="${times}" dur="${DUR}s" fill="freeze"/>
-      <line x1="${anchorX}" y1="${anchorY}" x2="${heroX}" y2="${handY}" stroke="#f4f7ff" stroke-width="1.6" opacity="0.9">
-        <animate attributeName="y2" values="${y2}" keyTimes="${times}" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="${splines}"/>
+      <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.lookBEnd};${shot};1" dur="${DUR}s" fill="freeze"/>
+      <line x1="${anchorX}" y1="${handY}" x2="${anchorX}" y2="${handY}" stroke="#f4f7ff" stroke-width="2" opacity="0.95">
+        <animate attributeName="y1" values="${handY};${handY};${anchorY};${anchorY}" keyTimes="0;${K.lookBEnd};${shot};1" dur="${DUR}s" fill="freeze"/>
+        <animate attributeName="y2" values="${handY};${handY};${handY};${handY - 700};${handY - 700}" keyTimes="0;${K.lookBEnd};${K.webStart};${K.gone};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0 0 1 1;0.4 0 0.6 1;0 0 1 1"/>
       </line>
       <g transform="translate(${anchorX},${anchorY})" opacity="0">
-        <animate attributeName="opacity" values="0;0;1;0" keyTimes="0;${K.lookBEnd};${K.lookBEnd + 0.02};${K.lookBEnd + 0.16}" dur="${DUR}s" fill="freeze"/>
+        <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${K.lookBEnd};${shot};${K.lookBEnd + 0.1};1" dur="${DUR}s" fill="freeze"/>
         <path d="M-9,0 L9,0 M0,-9 L0,9 M-6,-6 L6,6 M-6,6 L6,-6" stroke="#f4f7ff" stroke-width="1.6" stroke-linecap="round"/>
       </g>
     </g>`;
