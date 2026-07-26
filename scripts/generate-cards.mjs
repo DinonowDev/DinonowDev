@@ -331,7 +331,7 @@ function animatedContributionPanel(data, leftW) {
   const MORPH = 2.4;
   const SETTLE = 4.2;
   const BACK = 1.6;
-  const INTRO_DELAY = 9.0;
+  const INTRO_DELAY = 12.2;
   const TOTAL = HOLD + MORPH + SETTLE + BACK;
   const tHold = +(HOLD / TOTAL).toFixed(4);
   const tMorphEnd = +((HOLD + MORPH) / TOTAL).toFixed(4);
@@ -512,16 +512,21 @@ function heroCat(A) {
 }
 
 /**
- * Mask outline and eye lenses, redrawn after the classic comic mask: a tall
- * egg-shaped head tapering to a point at the chin, with big angular
- * "kite" lenses that come to a sharp corner toward the temple.
+ * Classic comic Spider-Man mask: oval head + large white almond lenses with
+ * a thick black rim and a sharp outer corner (matches the reference plate).
  */
 const SPIDEY_MASK =
-  "M0,-160 C24,-160 36,-142 34,-118 C33,-100 28,-84 16,-74 Q0,-64 -16,-74 C-28,-84 -33,-100 -34,-118 C-36,-142 -24,-160 0,-160 Z";
+  "M0,-162 C26,-162 38,-142 36,-116 C34,-96 28,-80 16,-70 Q0,-60 -16,-70 C-28,-80 -34,-96 -36,-116 C-38,-142 -26,-162 0,-162 Z";
+// Black rim — classic Spidey: big almond, brow dips in, sharp outer tip.
 const SPIDEY_LENS_R =
-  "M5,-109 C1,-120 2,-133 9,-142 C16,-149 26,-149 30,-142 C29,-133 24,-123 17,-115 C12,-109 8,-106 5,-109 Z";
+  "M1,-122 C2,-142 14,-156 28,-153 C37,-150 39,-138 36,-124 C32,-110 20,-102 8,-105 C3,-107 0,-114 1,-122 Z";
 const SPIDEY_LENS_L =
-  "M-5,-109 C-1,-120 -2,-133 -9,-142 C-16,-149 -26,-149 -30,-142 C-29,-133 -24,-123 -17,-115 C-12,-109 -8,-106 -5,-109 Z";
+  "M-1,-122 C-2,-142 -14,-156 -28,-153 C-37,-150 -39,-138 -36,-124 C-32,-110 -20,-102 -8,-105 C-3,-107 0,-114 -1,-122 Z";
+// White inset leaves a bold comic rim (~3–4px) all the way around.
+const SPIDEY_WHITE_R =
+  "M6,-123 C8,-139 16,-150 26,-148 C33,-146 34,-136 31,-125 C28,-114 19,-108 10,-109 C7,-110 5,-116 6,-123 Z";
+const SPIDEY_WHITE_L =
+  "M-6,-123 C-8,-139 -16,-150 -26,-148 C-33,-146 -34,-136 -31,-125 C-28,-114 -19,-108 -10,-109 C-7,-110 -5,-116 -6,-123 Z";
 
 /** One thick-stroked capsule limb, drawn twice (dark outline, then color) for a clean edge. */
 function limb(d, color, ink, w) {
@@ -613,31 +618,21 @@ function heroSpiderMan(A) {
 
           <path d="${SPIDEY_MASK}" fill="${RED}" stroke="${INK}" stroke-width="2.2"/>
 
-          <!-- Mask web: spokes radiating from the nose bridge, arcs bowing away from it -->
-          <g fill="none" stroke="${INK}" stroke-width="1.1" opacity="0.6">
-            <path d="M0,-131 L0,-159"/>
-            <path d="M0,-131 L-14,-157"/><path d="M0,-131 L14,-157"/>
-            <path d="M0,-131 L-27,-149"/><path d="M0,-131 L27,-149"/>
-            <path d="M0,-131 L-33,-128"/><path d="M0,-131 L33,-128"/>
-            <path d="M0,-131 L-28,-97"/><path d="M0,-131 L28,-97"/>
-            <path d="M0,-131 L-16,-76"/><path d="M0,-131 L16,-76"/>
-            <path d="M0,-131 L0,-65"/>
-            <path d="M-10,-121 Q0,-114 10,-121"/>
-            <path d="M-19,-110 Q0,-100 19,-110"/>
-            <path d="M-27,-97 Q0,-84 27,-97"/>
-            <path d="M-21,-79 Q0,-67 21,-79"/>
-            <path d="M-12,-143 Q0,-148 12,-143"/>
-            <path d="M-22,-151 Q0,-157 22,-151"/>
+          <!-- Radial web from the nose bridge (classic comic construction) -->
+          <g clip-path="url(#spidey-mask-clip)">
+            ${spiderWeb(0, -126, 54, { spokes: 14, rings: 5, color: INK, width: 1.05, opacity: 0.78 })}
           </g>
 
-          <!-- Big friendly white lenses, comic-book style -->
+          <!-- Classic white lenses with thick black rims -->
           <g>
             <animateTransform attributeName="transform" type="translate" values="${eyeShift}" keyTimes="${lookTimes}" dur="${DUR}s" fill="freeze"/>
-            <path d="${SPIDEY_LENS_L}" fill="#f6f8ff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
-            <path d="${SPIDEY_LENS_R}" fill="#f6f8ff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+            <path d="${SPIDEY_LENS_L}" fill="${INK}"/>
+            <path d="${SPIDEY_LENS_R}" fill="${INK}"/>
+            <path d="${SPIDEY_WHITE_L}" fill="#ffffff"/>
+            <path d="${SPIDEY_WHITE_R}" fill="#ffffff"/>
             <g clip-path="url(#spidey-lens-clip)">
-              <rect x="-40" y="-155" width="80" height="0" fill="${RED}">
-                <animate attributeName="height" values="0;0;16;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
+              <rect x="-40" y="-155" width="80" height="0" fill="${RED}" opacity="0.35">
+                <animate attributeName="height" values="0;0;14;0;0" keyTimes="0;0.9;0.94;0.98;1" dur="4.1s" repeatCount="indefinite"/>
               </rect>
             </g>
           </g>
@@ -697,12 +692,15 @@ const CURTAIN_THEMES = {
     exit: "webUp",
     hero: heroSpiderMan,
     defs: `
+    <clipPath id="spidey-mask-clip">
+      <path d="${SPIDEY_MASK}"/>
+    </clipPath>
     <clipPath id="spidey-lens-clip">
-      <path d="${SPIDEY_LENS_L}"/>
-      <path d="${SPIDEY_LENS_R}"/>
+      <path d="${SPIDEY_WHITE_L}"/>
+      <path d="${SPIDEY_WHITE_R}"/>
     </clipPath>
 
-    <!-- Curtain print, object 1: a sleek eight-legged spider silhouette. -->
+    <!-- Curtain print: sleek eight-legged spider silhouette. -->
     <g id="spider-mark">
       <g fill="none" stroke="#171719" stroke-width="1.8" stroke-linecap="round">
         <path d="M-3,-3 C-11,-8 -18,-8 -24,-15"/>
@@ -763,8 +761,8 @@ function openingShutter(width, height, themeName) {
     slats += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${theme.slat}" stroke-width="1" opacity="0.42"/>`;
   }
 
-  // Single 8.6s storyboard shared by the blind, the cord and the hero.
-  const DUR = 8.6;
+  // Single 12s storyboard: the web-up exit needs a long, readable climb.
+  const DUR = 12;
   const at = (s) => +(s / DUR).toFixed(4);
   const K = {
     walkedIn: at(1.0),
@@ -776,9 +774,9 @@ function openingShutter(width, height, themeName) {
     letGo: at(4.2),
     blindUp: at(5.5),
     lookBEnd: at(6.5),
-    // webUp exit only: the web is shot, then a slow steady ride to the top.
-    webStart: at(6.8),
-    gone: at(8.45),
+    // webUp exit: shoot, then a slow ~4.5s ride to the top.
+    webStart: at(7.0),
+    gone: at(11.6),
   };
   // Roller blinds travel fast then settle; keep it readable rather than snappy.
   const BLIND_EASE = "0 0 1 1;0.45 0 0.12 1;0 0 1 1";
@@ -808,7 +806,7 @@ function openingShutter(width, height, themeName) {
       ? {
           values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 0;0 -700;0 -700",
           keyTimes: `0;${K.walkedIn};${K.planted};${K.lookAEnd};${K.grabbed};${K.yankEnd};${K.released};${K.blindUp};${K.lookBEnd};${K.webStart};${K.gone};1`,
-          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0 0 1 1;0.4 0 0.6 1;0 0 1 1",
+          splines: "0.25 0.1 0.25 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.5 0 0.9 0.4;0.2 0.9 0.3 1;0 0 1 1;0 0 1 1;0 0 1 1;0.25 0 0.5 1;0 0 1 1",
         }
       : {
           values: "150 0;0 0;0 0;0 0;0 0;0 14;0 0;0 0;0 0;0 240",
@@ -938,7 +936,7 @@ function webExitLine(A, heroX, heroY) {
       <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${K.lookBEnd};${shot};1" dur="${DUR}s" fill="freeze"/>
       <line x1="${anchorX}" y1="${handY}" x2="${anchorX}" y2="${handY}" stroke="#f4f7ff" stroke-width="2" opacity="0.95">
         <animate attributeName="y1" values="${handY};${handY};${anchorY};${anchorY}" keyTimes="0;${K.lookBEnd};${shot};1" dur="${DUR}s" fill="freeze"/>
-        <animate attributeName="y2" values="${handY};${handY};${handY};${handY - 700};${handY - 700}" keyTimes="0;${K.lookBEnd};${K.webStart};${K.gone};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0 0 1 1;0.4 0 0.6 1;0 0 1 1"/>
+        <animate attributeName="y2" values="${handY};${handY};${handY};${handY - 700};${handY - 700}" keyTimes="0;${K.lookBEnd};${K.webStart};${K.gone};1" dur="${DUR}s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0 0 1 1;0.25 0 0.5 1;0 0 1 1"/>
       </line>
       <g transform="translate(${anchorX},${anchorY})" opacity="0">
         <animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${K.lookBEnd};${shot};${K.lookBEnd + 0.1};1" dur="${DUR}s" fill="freeze"/>
