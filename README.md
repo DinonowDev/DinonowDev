@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/DinonowDev/github-profile-card">
+  <a href="https://github.com/DinonowDev/github-profile-landing">
     <img src="https://img.shields.io/badge/Want%20a%20GitHub%20profile%20like%20this%3F-Click%20here-2dd4bf?style=for-the-badge&logo=github&logoColor=white" alt="Want a GitHub profile like this? Click here" />
   </a>
 </p>

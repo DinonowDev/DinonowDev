@@ -25,7 +25,7 @@ jobs:
       - name: Checkout card generator
         uses: actions/checkout@v4
         with:
-          repository: DinonowDev/github-profile-card
+          repository: DinonowDev/github-profile-landing
           path: .card-src
 
       - name: Setup Node
