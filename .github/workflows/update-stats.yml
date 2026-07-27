@@ -11,11 +11,6 @@ on:
         default: ""
         type: choice
         options: ["", "random", "cat", "spiderman", "batman"]
-  push:
-    branches: [main]
-    paths:
-      - "scripts/generate-cards.mjs"
-      - ".github/workflows/update-stats.yml"
 
 permissions:
   contents: write
@@ -24,23 +19,30 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout profile repo
         uses: actions/checkout@v4
+
+      - name: Checkout card generator
+        uses: actions/checkout@v4
+        with:
+          repository: DinonowDev/github-profile-card
+          path: .card-src
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      # CARD_THEME: set the repository variable (Settings -> Secrets and
-      # variables -> Actions -> Variables) to "cat", "spiderman", or "batman"
-      # to pin a character. Leave it unset for a random pick on every run.
-      - name: Generate SVG card
+      - name: Generate live SVG card
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_USERNAME: DinonowDev
           CARD_THEME: ${{ inputs.theme || vars.CARD_THEME }}
-        run: node scripts/generate-cards.mjs
+          USE_MOCK: "0"
+        run: |
+          node .card-src/scripts/generate-cards.mjs
+          mkdir -p assets
+          cp .card-src/assets/profile-card.svg assets/profile-card.svg
 
       - name: Commit & push if changed
         run: |
